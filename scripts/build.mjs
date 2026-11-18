@@ -1,8 +1,10 @@
 import { build } from 'esbuild';
 import fs from 'node:fs';
+const ver = JSON.parse(fs.readFileSync('version.json', 'utf8'));
 fs.mkdirSync('www', { recursive: true });
 await build({ entryPoints: ['src/adapter.js'], bundle: true, minify: true, format: 'iife', outfile: 'www/adapter.js', target: 'es2020', logLevel: 'error' });
 let html = fs.readFileSync('src/app.html', 'utf8');
-html = html.replace('<head>', '<head>\n<script src="adapter.js"></script>');
+const info = `<script>window.LEGACY_VERSION=${JSON.stringify(ver.version)};window.LEGACY_BUILD=${JSON.stringify(process.env.GITHUB_RUN_NUMBER || '')};window.LEGACY_NOTES=${JSON.stringify(ver.notes || [])};window.LEGACY_REPO="ArchSocrates/Legacy-Fitness-Tracker";</script>`;
+html = html.replace('<head>', '<head>\n' + info + '\n<script src="adapter.js"></script>');
 fs.writeFileSync('www/index.html', html);
-console.log('built www/', html.length, 'bytes');
+console.log('built v' + ver.version, html.length, 'bytes');

@@ -9,6 +9,8 @@ import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
   doc, collection, getDoc, getDocs, setDoc, deleteDoc, query, where, onSnapshot
 } from 'firebase/firestore';
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import cfg from './firebase-config.js';
 
 const app = initializeApp(cfg);
@@ -40,6 +42,7 @@ const db = {
   doc: p => docRef(p),
   auth: {
     ready: () => auth.authStateReady(),
+    uid,
     is: u => !!auth.currentUser && auth.currentUser.email === emailOf(u),
     signUp: (u, p) => createUserWithEmailAndPassword(auth, emailOf(u), p),
     signIn: (u, p) => signInWithEmailAndPassword(auth, emailOf(u), p),
@@ -50,3 +53,26 @@ const db = {
 const user = { id: async () => null };
 
 window.claude = { use: async name => (name === 'db' ? db : name === 'user' ? user : null) };
+
+// Android-only extras (reminders). In a normal browser window.LegacyNative stays undefined.
+if (Capacitor.isNativePlatform()) {
+  const IDS = [0, 1, 2, 3, 4, 5, 6].map(d => 201 + d);
+  window.LegacyNative = {
+    async setReminders(o) {
+      try {
+        await LocalNotifications.cancel({ notifications: IDS.map(id => ({ id })) });
+        if (!o.on) return { ok: true };
+        let p = await LocalNotifications.checkPermissions();
+        if (p.display !== 'granted') p = await LocalNotifications.requestPermissions();
+        if (p.display !== 'granted') return { ok: false, reason: 'denied' };
+        await LocalNotifications.schedule({
+          notifications: o.days.map(d => ({
+            id: 201 + d, title: o.title, body: o.body,
+            schedule: { on: { weekday: d + 1, hour: o.hour, minute: o.min } }
+          }))
+        });
+        return { ok: true };
+      } catch (e) { console.error(e); return { ok: false, reason: 'error' }; }
+    }
+  };
+}

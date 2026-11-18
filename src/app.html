@@ -167,6 +167,22 @@ svg text{font-family:Inter,sans-serif}
 .quote{margin:18px 4px 22px;padding:0 0 0 18px;border-left:3px solid var(--seal);font-family:var(--disp);font-size:22px;line-height:1.3;font-style:italic;color:var(--tx)}
 .lock .quote{border-left:0;padding:0;margin:8px 10px 24px;max-width:340px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.hint{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--seal) 8%,var(--field));border:1px solid var(--line)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-top:10px}
+.pth{aspect-ratio:3/4;border-radius:12px;background-size:cover;background-position:center;border:1px solid var(--line);position:relative;padding:0;display:block;width:100%}
+.pth span{position:absolute;left:4px;bottom:4px;background:rgba(0,0,0,.55);color:#fff;font-size:10.5px;padding:2px 6px;border-radius:99px}
+#conf{position:fixed;inset:0;pointer-events:none;z-index:90;overflow:hidden}
+#conf i{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px;animation:cf 1.5s ease-in forwards}
+@keyframes cf{to{transform:translate(var(--dx),105vh) rotate(var(--r));opacity:.9}}
+body.wide #app{max-width:1240px}
+body.wide nav.nav div{max-width:760px}
+body.wide .tbar>div{max-width:1200px}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start}
+.pane{height:calc(100vh - 160px - env(safe-area-inset-bottom));min-height:300px;overflow-y:auto;padding:0 8px 40px 2px;overscroll-behavior:contain}
+.pane+.pane{border-left:1px solid var(--line);padding-left:20px}
+.pbar{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}
 </style>
 </head>
 <body>
@@ -662,7 +678,7 @@ async function submitAuth(mode){
 }
 function resetState(){
   try{unsub&&unsub()}catch(e){}unsub=null;
-  Object.assign(S,{nav:[],_lt:null,gd:null,user:null,loaded:false,slow:false,profile:null,weights:[],logs:{},sess:null,tab:'home',P:null,modal:null,todayEq:['bw'],openSess:null,legChecked:false,filter:{q:'',m:'All',all:false,lim:60}});
+  Object.assign(S,{nav:[],_lt:null,gd:null,user:null,loaded:false,slow:false,profile:null,weights:[],logs:{},sess:null,tab:'home',P:null,modal:null,todayEq:['bw'],openSess:null,legChecked:false,meas:[],photos:[],board:null,update:null,tab2:null,filter:{q:'',m:'All',all:false,lim:60}});
   Object.keys(W).forEach(k=>delete W[k]);T=null;KEY=null;
 }
 function signOut(){try{localStorage.removeItem('legacy_session')}catch(e){}try{DB&&DB.auth&&DB.auth.signOut()}catch(e){}resetState();authScreen('in')}
@@ -679,6 +695,8 @@ function enter(u,key){
       Object.keys(out).forEach(id=>{if(id.startsWith('log_'))logs[id.slice(4)]=out[id].sessions||[]});
       if(!(W.profile&&W.profile.busy))S.profile=normP(prof);
       if(!(W.weights&&W.weights.busy))S.weights=wts||[];
+      if(!(W.meas&&W.meas.busy))S.meas=out.meas?out.meas.entries||[]:[];
+      if(!Object.keys(W).some(k=>k.startsWith('ph_')&&W[k].busy))S.photos=Object.keys(out).filter(id=>id.startsWith('ph_')).map(id=>out[id]);
       const nl={};
       new Set([...Object.keys(logs),...Object.keys(S.logs)]).forEach(m=>{const w=W['log_'+m];if(w&&w.busy){nl[m]=S.logs[m]}else if(logs[m])nl[m]=logs[m]});
       S.logs=nl;
@@ -686,6 +704,7 @@ function enter(u,key){
       if(first){S.todayEq=S.profile&&S.profile.equip?S.profile.equip.slice():['bw']}
       if(!document.activeElement||!/INPUT|SELECT/.test(document.activeElement.tagName))render();
       if(first&&!S.profile)checkLegacy();
+      if(first&&S.profile){applyReminders();checkUpdate();pubBoard();announce()}else if(first)lsSet('legacy_seen_ver',VER);
     },err=>{console.error(err);lockScreen('We could not load your data. Please try again.')});
   }catch(e){lockScreen('We could not load your data. Please try again.')}
 }
@@ -786,7 +805,7 @@ function gdLog(st){
   const d=draftFor(st.x),ex=BYID[st.x],t={x:st.x,t:Date.now()};
   if(ex.k==='t'){t.d=d.d;t.r=0}else t.r=d.r;
   if(d.w){t.w=d.w;t.u=unit()}
-  S.sess.sets.push(t);st.ref=t;saveActive();
+  prCheck(t);S.sess.sets.push(t);st.ref=t;saveActive();
 }
 function gdUnlog(st){if(st&&st.ref){const i=S.sess.sets.indexOf(st.ref);if(i>=0)S.sess.sets.splice(i,1);st.ref=null;saveActive()}}
 function gdAfterWork(log){
@@ -1141,7 +1160,7 @@ function sessFull(s){
   const t0=new Date(s.s).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
   return`<div class="spl"><div style="font-weight:700">${esc(t0)}${s.sd?' · '+esc(s.sd):''}${s.rc!=null?' <span class="tag m">Recovery</span>':''}</div><div class="xs mu">${hms(s.e-s.s)} · ${s.sets.length} sets · ${fmtN(reps)} reps${vol?' · '+fmtN(fromKg(vol,u))+' '+u:''}</div>
   ${names.map(x=>{const e=BYID[x];return`<div style="margin-top:10px"><div class="sm" style="font-weight:600">${esc(e?e.name:x)}${e?` <span class="tag m">${MU[e.m]}</span>`:''}</div>${s.sets.filter(t=>t.x===x).map((t,i)=>`<div class="xs mu">Set ${i+1}: ${esc(setText(t))}</div>`).join('')}</div>`}).join('')}
-  <button class="btn red s" style="margin-top:12px" data-act="delSessAsk" data-a="${s.id}">Delete workout</button></div>`;
+  <div class="row" style="margin-top:12px"><button class="btn ghost s" data-act="shareSess" data-a="${s.id}">Share</button><button class="btn red s" data-act="delSessAsk" data-a="${s.id}">Delete workout</button></div></div>`;
 }
 function monthSummary(c,M){
   const pre=c.y+'-'+p2(c.m+1)+'-',days=Object.keys(M).filter(k=>k.startsWith(pre)),ss=days.flatMap(k=>M[k].w);
@@ -1334,19 +1353,28 @@ const MARK='<svg class="mark" viewBox="0 0 32 32" fill="none" stroke="currentCol
 const chip=(l,on,a,b)=>`<button class="chip${on?' on':''}" data-act="${a}" data-a="${esc(b)}">${esc(l)}</button>`;
 const stepperHtml=(val,lab,act,a)=>`<div class="stepper"><button data-act="${act}" data-a="${a}" data-b="-1" aria-label="decrease">−</button><div class="v">${val}<small>${lab}</small></div><button data-act="${act}" data-a="${a}" data-b="1" aria-label="increase">+</button></div>`;
 
+function viewOf(t){
+  switch(t){case'home':return homeView();case'lib':return libView();case'wk':return wkView();case'tm':return tmView();case'pr':return prView();case'me':return meView();case'rec':return recView();case'cal':return calView();case'learn':return learnView();case'ck':return S.K?ckView():homeView()}
+  return'';
+}
 function render(){
   const app=$('#app');
   if(!S.loaded){app.innerHTML=`<div class="lock"><div class="word">LEGACY</div><div class="mu">${S.slow?'Still connecting… this is taking longer than usual.':'Loading your data…'}</div></div>`;return}
   if(!S.profile){app.innerHTML=header()+setupView();updatePreview();return}
   S.nav=S.nav||[];if(S._lt&&S._lt!==S.tab&&!S._back){S.nav.push(S._lt);if(S.nav.length>30)S.nav.shift()}S._lt=S.tab;S._back=false;
-  let v='';
-  switch(S.tab){case'home':v=homeView();break;case'lib':v=libView();break;case'wk':v=wkView();break;case'tm':v=tmView();break;case'pr':v=prView();break;case'me':v=meView();break;case'rec':v=recView();break;case'cal':v=calView();break;case'learn':v=learnView();break;case'ck':v=S.K?ckView():homeView();break}
+  let v=viewOf(S.tab);
+  const wide=wideOK()&&S.profile;document.body.classList.toggle('wide',!!wide);
+  let t2=null;
+  if(wide){t2=pane2Tab();v=`<div class="split"><div class="pane" data-pane="0">${v}</div><div class="pane" data-pane="1">${paneBar(t2)}${viewOf(t2)}</div></div>`}
+  const pTop=[...document.querySelectorAll('.pane')].map(e=>e.scrollTop),pk=S._pk||[];
   const shEl=document.querySelector('.sheet-in'),shTop=shEl?shEl.scrollTop:0;
   app.innerHTML=header()+v+timerBar()+navHtml()+modalHtml()+gdHtml()+tourHtml();
   if(shTop){const n=document.querySelector('.sheet-in');if(n)n.scrollTop=shTop}
+  if(wide){document.querySelectorAll('.pane').forEach((e,i)=>{if(pk[i]===(i?t2:S.tab)&&pTop[i])e.scrollTop=pTop[i]})}
+  S._pk=wide?[S.tab,t2]:null;
   paintTimer();gdPaint();if(S.tour)tourPos();if(S.P)updatePreview();
 }
-function header(){const back=S.profile&&S.tab!=='home'?'<button class="bk" data-act="back" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>':'';return`<div class="top"><div class="l">${back}<div class="brand">${MARK}<b>LEGACY</b></div></div><div class="hr">${S.profile?'<button class="tb" data-act="tourMenu">Tour</button>':''}<div class="sync ${S.sync}" id="sync"><i></i><span>${S.sync==='saving'?'Saving…':S.sync==='error'?'Not saved':'Saved'}</span></div></div></div>`}
+function header(){const back=S.profile&&S.tab!=='home'?'<button class="bk" data-act="back" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>':'';return`<div class="top"><div class="l">${back}<div class="brand">${MARK}<b>LEGACY</b></div></div><div class="hr">${S.profile&&window.innerWidth>=840&&lsGet('legacy_two')==='off'?'<button class="tb" data-act="twoToggle">Two panes</button>':''}${S.profile?'<button class="tb" data-act="tourMenu">Tour</button>':''}<div class="sync ${S.sync}" id="sync"><i></i><span>${S.sync==='saving'?'Saving…':S.sync==='error'?'Not saved':'Saved'}</span></div></div></div>`}
 function navHtml(){
   const t=[['home','Home','home'],['cal','Calendar','cal'],['lib','Exercises','lib'],['wk','Workout','wk'],['tm','Timer','tm'],['pr','Progress','pr'],['me','You','me']];
   return`<nav class="nav"><div>${t.map(([k,l,i])=>`<button class="${S.tab===k?'on':''}" data-act="tab" data-a="${k}">${ico(i)}<span>${l}${k==='wk'&&S.sess?' •':''}</span></button>`).join('')}</div></nav>`;
@@ -1360,10 +1388,13 @@ function modalHtml(){
   const m=S.modal;if(!m)return'';
   if(m.type==='confirm')return`<div class="modal" data-act="mclose"><div><h2 style="margin-top:0">${esc(m.title)}</h2><p class="mu">${esc(m.msg)}</p><div class="row"><button class="btn ghost grow" data-act="mclose">Cancel</button><button class="btn grow ${m.red?'red':''}" data-act="${m.act}" data-a="${esc(m.arg||'')}">${esc(m.ok||'Confirm')}</button></div></div></div>`;
   if(m.type==='tourmenu')return tourMenuHtml();
+  if(m.type==='photo')return photoModal(m);
+  if(m.type==='sharecode')return shareModal(m);
+  if(m.type==='whatsnew')return whatsNewModal();
   if(m.type==='done'){const s=m.s,u=unit();return`<div class="modal"><div><div class="lbl">Workout complete</div><h2 style="margin:4px 0 4px">Another one for the Legacy</h2>${bubble(5)}
    <div class="tiles"><div class="tile"><div class="lbl">Time</div><div class="big">${hms(s.e-s.s)}</div></div><div class="tile"><div class="lbl">Sets</div><div class="big">${s.sets.length}</div></div>
    <div class="tile"><div class="lbl">Reps</div><div class="big">${fmtN(s.sets.reduce((a,t)=>a+(t.r||0),0))}</div></div><div class="tile"><div class="lbl">Volume (${u})</div><div class="big">${fmtN(fromKg(volumeKg(s.sets),u))}</div></div></div>
-   ${LVL()==='beginner'?'<p class="sm" style="margin:0 0 10px"><b>Cool down:</b> walk easily for 3 minutes, stretch the muscles you trained, and drink water.</p>':''}<p class="mu xs" style="margin:0 0 12px">Tomorrow Legacy will ask how your body feels, so you can log anything sore or cramping.</p><button class="btn blk" data-act="mclose">Nice</button></div></div>`}
+   ${LVL()==='beginner'?'<p class="sm" style="margin:0 0 10px"><b>Cool down:</b> walk easily for 3 minutes, stretch the muscles you trained, and drink water.</p>':''}${s.sets.some(t=>t.pr)?`<p class="sm" style="margin:0 0 10px">★ <b>${s.sets.filter(t=>t.pr).length}</b> new personal record${s.sets.filter(t=>t.pr).length>1?'s':''}</p>`:''}<p class="mu xs" style="margin:0 0 12px">Tomorrow Legacy will ask how your body feels, so you can log anything sore or cramping.</p><button class="btn blk" data-act="mclose">Nice</button></div></div>`}
   return'';
 }
 
@@ -1443,6 +1474,7 @@ function meView(){
   return`<h2>You</h2>${formHtml(false)}<button class="btn blk" data-act="saveP">Save changes</button>
   <div class="card" style="margin-top:20px"><div class="row sp"><div><div style="font-weight:700">Learn and tour</div><div class="mu sm">Lessons, plus replay the app tour.</div></div><button class="btn s dark" data-act="tab" data-a="learn">Open</button></div></div>
   <div class="card" style="margin-top:20px"><h3>Sky</h3><p class="mu sm" style="margin-top:0">Legacy\'s colours follow your local time. Pick a moment to preview it.</p><div class="seg">${[['auto','Auto'],['dawn','Dawn'],['day','Day'],['dusk','Dusk'],['night','Night']].map(([k,l])=>`<button class="${skyPick()===k?'on':''}" data-act="sky" data-a="${k}">${l}</button>`).join('')}</div></div>
+  ${remCard()}${aboutCard()}
   <div class="card" style="margin-top:20px"><h3>Account</h3><p class="mu sm">Signed in as <b>@${esc(S.user)}</b>. Your data is encrypted with your password, so only you can read it. A forgotten password can't be recovered.</p>
   <div class="row wrap"><button class="btn dark s" data-act="signout">Sign out</button><button class="btn ghost s" data-act="export">Copy my data</button><button class="btn red s" data-act="wipeAsk">Delete all my data</button></div></div>`;
 }
@@ -1450,14 +1482,14 @@ function meView(){
 /* ---------- home ---------- */
 function homeView(){
   const P=S.profile,u=wu(),lw=latestW(),h=new Date().getHours(),g=h<12?'Good morning':h<18?'Good afternoon':'Good evening';
-  const ss=allSessions(),wk=ss.filter(s=>s.s>=weekStart(Date.now())).length,goal=+P.wk||3,st=streak();
+  const ss=allSessions(),wk=ss.filter(s=>s.s>=weekStart(Date.now())).length,goal=+P.wk||3,st=streakInfo().days;
   const bmi=lw&&P.heightCm?BMI(lw.kg,P.heightCm):null,cat=bmi?bmiCat(bmi):null;
   const prev=S.weights.length>1?S.weights[S.weights.length-2]:null;
   const diff=lw&&prev?(lw.kg-prev.kg)/WF[u]:null;
   const C=2*Math.PI*34,fr=clamp(wk/goal,0,1);
   const av=availTpl(),avail=av.list;
   return`<div class="mu sm">${new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})}</div>
-  <div class="hero" style="font-size:34px;margin:2px 0 4px">${g}${P.name?', '+esc(P.name):''}</div>${bubble(0)}${ckCard()}${recCard()}${planCard()}${splitCard(true)}${weekStrip()}
+  <div class="hero" style="font-size:34px;margin:2px 0 4px">${g}${P.name?', '+esc(P.name):''}</div>${bubble(0)}${updCard()}${ckCard()}${recCard()}${planCard()}${splitCard(true)}${weekStrip()}${streakCard()}
   <div class="card gold"><div class="row" style="padding-right:44px">
    <svg width="84" height="84" viewBox="0 0 84 84"><circle cx="42" cy="42" r="34" fill="none" stroke="var(--track)" stroke-width="9"/><circle cx="42" cy="42" r="34" fill="none" stroke="var(--au)" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-fr)}" transform="rotate(-90 42 42)"/><text x="42" y="49" text-anchor="middle" font-family="Instrument Serif" font-size="28" fill="var(--tx)">${wk}/${goal}</text></svg>
    <div class="grow"><div class="lbl">This week</div><div style="font-weight:700;font-size:17px">${wk>=goal?'Weekly goal hit':'Workouts completed'}</div><div class="mu sm">${st?`🔥 ${st}-day streak`:'Start a streak today'}</div></div></div>
@@ -1531,7 +1563,7 @@ function wxCard(x){
    :`<div style="margin-top:12px">${stepperHtml(d.r,'reps','rep',x)}</div><div class="row" style="margin-top:12px"><button class="btn dark grow" data-act="rep" data-a="${x}" data-b="1">+1 rep</button><button class="btn grow" data-act="logset" data-a="${x}">Log set</button></div><button class="btn s ghost blk" style="margin-top:8px" data-act="settimer" data-a="${x}">Time this set</button>`;
   return`<div class="card"><div class="row sp"><div class="grow"><div style="font-weight:700;font-size:17px">${esc(e.name)}</div><span class="tag m">${MU[e.m]}</span></div><a class="btn s yt" href="${yt(e)}" target="_blank" rel="noopener">▶ Form</a><button class="x" data-act="rmex" data-a="${x}" aria-label="Remove exercise">✕</button></div>
   ${l?`<div class="xs" style="color:var(--au2);margin-top:6px">Last time: ${esc(setText(l))}</div>`:''}
-  <p class="mu xs" style="margin:6px 0 0">${esc(e.tip)}</p>${recNote(e,sets.length)}${ckNote(e)}${mkNote(e,sets.length)}${levelNote(e,sets.length,sets.map(t=>t))}
+  ${hintHtml(x,sets.length)}<p class="mu xs" style="margin:6px 0 0">${esc(e.tip)}</p>${recNote(e,sets.length)}${ckNote(e)}${mkNote(e,sets.length)}${levelNote(e,sets.length,sets.map(t=>t))}
   ${sets.length?`<div style="margin-top:10px">${sets.map((o,n)=>`<div class="setrow"><span><b>${n+1}</b>${esc(setText(o.t))}</span><button class="x" data-act="rmset" data-a="${o.i}" aria-label="Delete set">✕</button></div>`).join('')}</div>`:''}
   ${wHtml}${entry}</div>`;
 }
@@ -1542,6 +1574,7 @@ function wkView(){
     if(RI&&RI.ph===0&&!S.recAny)return`<h2>Workout</h2>${recCard()}<button class="btn dark blk" data-act="recAny">Train anyway, very gently</button>`;
     return`<h2>Workout</h2>${recCard()}${splitCard(false)}${mkCard()}${bubble(1)}<div class="card gold"><div class="lbl" style="margin-bottom:8px">What equipment are you using today?</div>${eqPicker()}<p class="mu xs" style="margin:10px 0 0">We'll only suggest exercises and routines you can do with it.</p></div>
     <button class="btn blk" data-act="startEmpty">Start empty workout</button>
+    <div style="height:10px"></div>${codeCard()}
     <h2>Routines for your equipment</h2>
     ${avail.length?avail.map(t=>`<div class="card"><div class="row sp"><div><div class="disp" style="font-size:21px">${esc(t.n)}</div><div class="mu sm">${esc(t.d)} · ${t.ids.length} exercises</div></div><button class="btn s" data-act="tpl" data-a="${esc(t.n)}">Start</button><button class="btn s dark" data-act="tplGuided" data-a="${esc(t.n)}">Guided</button></div><div class="xs mu" style="margin-top:8px">${t.ids.map(i=>esc(BYID[i].name)).join(' · ')}</div></div>`).join(''):'<div class="empty">No routines match that equipment. Start an empty workout and pick exercises.</div>'}
     ${av.more>0?`<div class="xs mu" style="margin-top:6px">${av.more} more routines unlock when you add equipment.</div>`:''}${av.held.length?`<div class="xs mu" style="margin-top:6px">${recInfo()?'Held back while you recover':'Save for later'}: ${av.held.map(t=>esc(t.n)).join(', ')}</div>`:''}`;
@@ -1550,7 +1583,7 @@ function wkView(){
   const coach=LVL()==='beginner'?`<div class="card gold"><div class="lbl">Coach</div><p class="sm" style="margin:8px 0">Warm up for 5 minutes first. Watch the ▶ Form video for each exercise. Light weights, slow reps, breathe out on the effort.</p><div class="row wrap"><button class="btn s dark" data-act="warm">Start 5-min warm-up</button><button class="btn s ghost" data-act="tab" data-a="learn">Learn more</button></div></div>`:'';
   return`${guide}${coach}<div class="row sp" style="margin-top:10px"><div><div class="lbl">Workout time</div><div class="big" data-tv="wo">0:00</div></div><div class="row"><button class="btn ghost s" data-act="discardAsk">Discard</button><button class="btn s" data-act="finish">Finish</button></div></div>
   ${s.exs.length?s.exs.map(wxCard).join(''):'<div class="empty">No exercises yet. Add some from the library.</div>'}
-  <button class="btn dark blk" data-act="tab" data-a="lib">+ Add exercise</button>${bubble(2)}`;
+  <button class="btn dark blk" data-act="tab" data-a="lib">+ Add exercise</button>${s.exs.length?'<button class="btn ghost blk" data-act="shareWk" style="margin-top:10px">Share this workout</button>':''}${bubble(2)}`;
 }
 
 /* ---------- timer tab ---------- */
@@ -1607,8 +1640,8 @@ function weekBars(){
   return`<svg viewBox="0 0 ${Wd} ${H}" width="100%" role="img" aria-label="Workouts per week">${counts.map((c,i)=>{const h=c.c/mx*80;return`<rect x="${i*bw+10}" y="${100-h}" width="34" height="${Math.max(h,2)}" rx="6" fill="${i===n-1?'var(--acc)':'var(--mu)'}"/><text x="${i*bw+27}" y="${94-h}" text-anchor="middle" font-size="12" fill="var(--tx)">${c.c||''}</text><text x="${i*bw+27}" y="118" text-anchor="middle" font-size="10" fill="var(--mu)">${dlabel(dkey(c.a))}</text>`}).join('')}</svg>`;
 }
 function prView(){
-  const seg=`<div class="seg" style="margin:10px 0"><button class="${S.pTab==='body'?'on':''}" data-act="ptab" data-a="body">Body</button><button class="${S.pTab==='train'?'on':''}" data-act="ptab" data-a="train">Training</button></div>`;
-  return`<h2 style="margin-bottom:6px">Progress</h2>${bubble(4)}${seg}${S.pTab==='body'?bodyView():trainView()}`;
+  const seg=`<div class="seg" style="margin:10px 0">${[['body','Body'],['train','Training'],['meas','Measures'],['fr','Friends']].map(([k,l])=>`<button class="${S.pTab===k?'on':''}" data-act="ptab" data-a="${k}">${l}</button>`).join('')}</div>`;
+  return`<h2 style="margin-bottom:6px">Progress</h2>${bubble(4)}${seg}${S.pTab==='body'?bodyView():S.pTab==='train'?trainView():S.pTab==='meas'?measView():friendsView()}`;
 }
 function bodyView(){
   const P=S.profile,u=wu(),lw=latestW(),cm=P.heightCm;
@@ -1652,7 +1685,7 @@ function trainView(){
   return`<div class="tiles"><div class="tile"><div class="lbl">Workouts</div><div class="big">${ss.length}</div></div><div class="tile"><div class="lbl">Sets</div><div class="big">${fmtN(sets.length)}</div></div><div class="tile"><div class="lbl">Total reps</div><div class="big">${fmtN(reps)}</div></div><div class="tile"><div class="lbl">Lifted (${u})</div><div class="big">${fmtN(fromKg(vol,u))}</div></div></div>
   <div class="card"><div class="lbl" style="margin-bottom:8px">Workouts per week</div>${weekBars()}</div>
   <div class="card"><div class="lbl" style="margin-bottom:8px">Personal bests</div>${pbs.map(([x,b])=>`<div class="setrow"><span>${esc(BYID[x].name)}</span><b style="margin:0">${esc(setText(b.top.t))}</b></div>`).join('')}</div>
-  <h2>History</h2>${ss.slice(0,40).map(sessCard).join('')}`;
+  ${prCard(ss)}<h2>History</h2>${ss.slice(0,40).map(sessCard).join('')}`;
 }
 
 /* ================= ACTIONS ================= */
@@ -1760,10 +1793,10 @@ const A={
   const d=draftFor(a),ex=BYID[a],t={x:a,t:Date.now()};
   if(ex.k==='t'){t.d=d.d;t.r=0}else t.r=d.r;
   if(d.w){t.w=d.w;t.u=unit()}
-  S.sess.sets.push(t);saveActive();
+  prCheck(t);S.sess.sets.push(t);saveActive();
   const RI=recInfo(),rest=Math.round(((S.sess&&S.sess.mk?S.sess.mk.rest:+S.profile.rest)||0)*(RI&&RI.ph<4?RI.rest:1));
   if(rest)startT('rest',{total:rest*1000,label:'Rest',sub:BYID[a].name});else render();
-  buzz(30);toast('Set logged');
+  buzz(30);if(!t.pr)toast('Set logged');
  },
  finish(){
   const s=S.sess;
@@ -1810,7 +1843,7 @@ const A={
   const unitChanged=S.profile&&S.profile.lUnit!==P.lUnit;
   S.profile=Object.assign({},P,{equip:[...new Set(['bw',...P.equip])]});
   saveProfile();
-  if(a==='first'){S.todayEq=S.profile.equip.slice();if(w)addWeight({d:today(),kg:rnd(w,2)});S.tour={p:0,ids:TSTEPS.map((x,i)=>i),full:true,name:'Tour',from:'home',nav:[]}}
+  if(a==='first'){lsSet('legacy_seen_ver',VER);S.todayEq=S.profile.equip.slice();if(w)addWeight({d:today(),kg:rnd(w,2)});S.tour={p:0,ids:TSTEPS.map((x,i)=>i),full:true,name:'Tour',from:'home',nav:[]}}
   else{S.todayEq=[...new Set(['bw',...S.todayEq.filter(e=>S.profile.equip.includes(e)||S.todayEq.includes(e))])]}
   S.P=null;S.tab=a==='first'?'home':S.tab;if(a!=='first')toast(unitChanged?'Saved. Lifting units changed':'Saved');render();scrollTo(0,0);
  },
@@ -1820,9 +1853,9 @@ const A={
  },
  wipeAsk(){S.modal={type:'confirm',title:'Delete everything?',msg:'This permanently deletes your profile, weigh-ins and workout history. This cannot be undone.',act:'wipe',ok:'Delete all',red:1};render()},
  async wipe(){
-  const u=S.user,ids=['profile','weights',...Object.keys(S.logs).map(m=>'log_'+m)];
+  const u=S.user,ids=['profile','weights','meas',...(S.photos||[]).map(p=>'ph_'+p.id),...Object.keys(S.logs).map(m=>'log_'+m)];
   S.modal=null;
-  try{await Promise.all(ids.map(i=>col.doc(u+':'+i).delete()));await DB.doc('accts/'+u).delete();if(DB.auth){try{await DB.auth.deleteUser()}catch(e){}}}catch(e){toast('Could not delete everything');return}
+  try{await Promise.all(ids.map(i=>col.doc(u+':'+i).delete()));try{if(DB.auth&&DB.auth.uid())await DB.collection('board').doc(DB.auth.uid()).delete()}catch(e){}await DB.doc('accts/'+u).delete();if(DB.auth){try{await DB.auth.deleteUser()}catch(e){}}}catch(e){toast('Could not delete everything');return}
   try{localStorage.removeItem(ACT_KEY())}catch(e){}
   signOut();
  },
@@ -1854,6 +1887,287 @@ const I={
  q(v){S.filter.q=v;S.filter.lim=60;$('#exlist').innerHTML=listHtml()},
  dw(v,a){draftFor(a).w=parseFloat(v)||0;saveActive()}
 };
+/* ================= v1.1 FEATURES ================= */
+const VER=window.LEGACY_VERSION||'dev',BUILD=window.LEGACY_BUILD||'',NOTES=window.LEGACY_NOTES||[];
+const verNum=v=>String(v||'0').replace(/^v/,'').split('.').map(n=>parseInt(n,10)||0);
+const verGt=(a,b)=>{const x=verNum(a),y=verNum(b);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d>0}return false};
+const saveMeas=()=>persist('meas',()=>({entries:S.meas||[]}));
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+
+/* ---------- personal records + overload hints ---------- */
+const e1=t=>{const ex=BYID[t.x];if(!ex)return 0;if(ex.k==='t')return t.d||0;const kg=t.w?toKg(t.w,t.u||unit()):0;return kg?kg*(1+(t.r||0)/30):(t.r||0)};
+function prBest(x,skip){let b=0;const f=t=>{if(t.x===x&&t!==skip){const v=e1(t);if(v>b)b=v}};allSessions().forEach(s=>s.sets.forEach(f));if(S.sess)S.sess.sets.forEach(f);return b}
+function confetti(){
+  let c=document.getElementById('conf');if(!c){c=document.createElement('div');c.id='conf';document.body.appendChild(c)}
+  const cols=['#c8391f','#e0a82e','#1f8a54','#5b7fbf','#f3eee2'];
+  c.innerHTML=Array.from({length:26},(_,i)=>`<i style="left:${4+Math.random()*92}%;background:${cols[i%5]};animation-delay:${Math.random()*.25}s;--dx:${(Math.random()*160-80).toFixed(0)}px;--r:${(Math.random()*720-360).toFixed(0)}deg"></i>`).join('');
+  clearTimeout(confetti._t);confetti._t=setTimeout(()=>{c.innerHTML=''},1900);
+}
+function prCheck(t){
+  const b=prBest(t.x,t),v=e1(t);
+  if(b>0&&v>b*1.0001){t.pr=1;const ex=BYID[t.x];confetti();buzz([40,40,80]);toast('New personal record! '+(ex?ex.name:''));return true}
+  return false;
+}
+function hintFor(x){
+  const ex=BYID[x];if(!ex)return null;
+  const R=recInfo();if(R&&R.ph<4)return null;
+  const prev=allSessions().find(s=>s.sets.some(t=>t.x===x));if(!prev)return null;
+  const a=prev.sets.filter(t=>t.x===x),top=a.reduce((m,t)=>e1(t)>e1(m)?t:m,a[0]),u=unit(),m=wmode(ex);
+  if(ex.k==='t'){const d=Math.min((top.d||0)+5,180);return{d,text:d+' second hold',why:'Last time '+(top.d||0)+'s. Add 5 seconds.'}}
+  const reps=a.map(t=>t.r||0),mx=Math.max(...reps),lvl=LVL(),hi=lvl==='beginner'?15:12,lo=lvl==='beginner'?10:8;
+  if(!top.w){const r=Math.min(mx+1,40);return{r,text:r+' reps',why:'Last time your best set was '+mx+'. Add one rep.'}}
+  let w=top.u===u?top.w:rnd(fromKg(toKg(top.w,top.u),u),1);
+  if(a.length>=2&&reps.every(r=>r>=hi)){
+    const chips=(m==='db'||m==='kb')?chipsFor(m):null;let nw;
+    if(chips&&chips.length){nw=chips.find(c=>c>w)}
+    if(!nw)nw=rnd(w+(u==='lb'?5:2.5),1);
+    return{w:nw,r:lo,text:nw+' '+u+' × '+lo,why:'Every set hit '+hi+' reps, so go heavier and start back at '+lo+'.'};
+  }
+  const r=Math.min(top.r+1,hi);
+  return{w,r,text:w+' '+u+' × '+r,why:'Same weight, one more rep. At '+hi+' reps on every set, add weight.'};
+}
+function hintHtml(x,n){
+  if(n>0)return'';const h=hintFor(x);if(!h)return'';
+  return`<div class="hint"><div class="grow"><div class="lbl">Try today</div><div style="font-weight:700">${esc(h.text)}</div><div class="xs mu">${esc(h.why)}</div></div><button class="btn s dark" data-act="useHint" data-a="${x}">Use</button></div>`;
+}
+function prCard(ss){
+  const rows=ss.flatMap(s=>s.sets.filter(t=>t.pr).map(t=>({t,d:dkey(s.s)}))).sort((a,b)=>b.t.t-a.t.t).slice(0,8);
+  return`<div class="card"><div class="lbl" style="margin-bottom:8px">Recent records</div>${rows.length?rows.map(({t,d})=>`<div class="setrow"><span>★ ${esc(BYID[t.x]?BYID[t.x].name:t.x)}</span><span class="row"><b style="margin:0">${esc(setText(t))}</b><span class="xs mu">${dlabel(d,true)}</span></span></div>`).join(''):'<p class="mu sm" style="margin:0">Beat your best on any exercise and it shows up here with a celebration.</p>'}</div>`;
+}
+
+/* ---------- streaks and rest days ---------- */
+function streakInfo(){
+  const P=S.profile||{},ss=allSessions(),W=new Set(ss.map(s=>dkey(s.s)));
+  const R=new Set([...(P.sick||[]),...(P.plan||[]).filter(p=>p.n==='Rest day').map(p=>p.d)]);
+  const day0=()=>{const d=new Date();d.setHours(12,0,0,0);return d};
+  let c=0,un=0;const d=day0();
+  if(!W.has(dkey(d.getTime())))d.setDate(d.getDate()-1);
+  for(let i=0;i<900;i++){const k=dkey(d.getTime());if(W.has(k)){c++;un=0}else if(R.has(k)){un=0}else{un++;if(un>=2)break}d.setDate(d.getDate()-1)}
+  let best=0;
+  if(ss.length){const first=new Date(ss[ss.length-1].s);first.setHours(12,0,0,0);const e=day0();let run=0,u2=0;
+    for(const x=new Date(first);x<=e;x.setDate(x.getDate()+1)){const k=dkey(x.getTime());if(W.has(k)){run++;u2=0;if(run>best)best=run}else if(R.has(k)){u2=0}else{u2++;if(u2>=2){run=0}}}}
+  const goal=+P.wk||3,wc={};ss.forEach(s=>{const w=weekStart(s.s);wc[w]=(wc[w]||0)+1});
+  let wk=0,w0=weekStart(Date.now());if((wc[w0]||0)<goal)w0-=7*864e5;
+  while((wc[w0]||0)>=goal){wk++;w0-=7*864e5}
+  const t=today();
+  return{days:c,best:Math.max(best,c),weeks:wk,doneToday:W.has(t),restToday:R.has(t)&&!W.has(t),goal};
+}
+function streakCard(){
+  const s=streakInfo();
+  const line=s.days?`🔥 ${s.days}-day streak`:'No streak yet';
+  const sub=`Best ${s.best} day${s.best===1?'':'s'}${s.weeks?` · ${s.weeks} week${s.weeks===1?'':'s'} on goal`:''}`;
+  const btn=s.doneToday?'<span class="tag m">Trained today</span>':`<button class="btn s ${s.restToday?'':'dark'}" data-act="restToday">${s.restToday?'Resting today ✓':'Rest day today'}</button>`;
+  return`<div class="card"><div class="row sp"><div><div class="lbl">Streak</div><div style="font-weight:700;font-size:19px">${line}</div><div class="xs mu">${sub}</div></div>${btn}</div><div class="xs mu" style="margin-top:8px">Rest days and sick days never break your streak. One unplanned day off is fine too. Two in a row ends it.</div></div>`;
+}
+
+/* ---------- body measurements ---------- */
+const MEAS=[['chest','Chest'],['waist','Waist'],['hips','Hips'],['arm','Upper arm'],['thigh','Thigh']];
+function spark(pts){
+  if(pts.length<2)return'';const w=160,h=34,xs=pts.map(p=>p.t),ys=pts.map(p=>p.v),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const X=t=>x1===x0?w/2:(t-x0)/(x1-x0)*(w-6)+3,Y=v=>y1===y0?h/2:h-4-(v-y0)/(y1-y0)*(h-8);
+  return`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="display:block"><polyline fill="none" stroke="var(--seal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="${pts.map(p=>X(p.t).toFixed(1)+','+Y(p.v).toFixed(1)).join(' ')}"/></svg>`;
+}
+function measView(){
+  const u=waistU(),es=S.meas||[],ph=S.photos||[];
+  const form=`<div class="card"><div class="lbl" style="margin-bottom:8px">Log measurements</div><input type="date" id="m_d" value="${today()}" max="${today()}">
+  <div class="grid2" style="margin-top:10px">${MEAS.map(([k,l])=>`<label class="f" style="margin:0">${l} (${u})<input type="number" inputmode="decimal" id="m_${k}" placeholder="optional"></label>`).join('')}</div>
+  <button class="btn blk" style="margin-top:12px" data-act="measSave">Save</button></div>`;
+  const cards=MEAS.map(([k,l])=>{
+    const a=es.filter(e=>e[k]!=null);if(!a.length)return'';
+    const last=a[a.length-1],first=a[0],ch=a.length>1?hv(last[k]-first[k],u):null;
+    return`<div class="card"><div class="row sp"><div><div class="lbl">${l}</div><div class="big">${hv(last[k],u)} <span class="mu sm">${u}</span></div>${ch!=null?`<div class="xs mu">${ch>0?'+':''}${rnd(ch,1)} ${u} since ${dlabel(first.d,true)}</div>`:''}</div>${spark(a.map(e=>({t:pd(e.d).getTime(),v:e[k]})))}</div></div>`}).join('');
+  const hist=es.length?`<div class="card"><div class="lbl" style="margin-bottom:6px">History</div>${[...es].reverse().slice(0,20).map(e=>`<div class="setrow"><span class="sm">${dlabel(e.d,true)} · ${MEAS.filter(([k])=>e[k]!=null).map(([k,l])=>l+' '+hv(e[k],u)).join(', ')}</span><button class="x" data-act="measDel" data-a="${e.d}" aria-label="Delete">✕</button></div>`).join('')}</div>`:'';
+  const gal=`<h2>Progress photos</h2><div class="card"><p class="mu sm" style="margin:0 0 10px">Photos are encrypted with your password like everything else, and shrunk to save space.${ph.length?` ${ph.length} saved.`:''}</p>
+  <input type="file" id="ph_in" accept="image/*" style="display:none" data-ch="photo"><button class="btn blk" data-act="photoPick">Add a photo</button></div>
+  ${ph.length>1?photoCompare(ph):''}
+  ${ph.length?`<div class="pgrid">${[...ph].sort((a,b)=>b.d.localeCompare(a.d)||b.t-a.t).map(p=>`<button class="pth" data-act="photoOpen" data-a="${p.id}" style="background-image:url(${p.img})" aria-label="Photo ${p.d}"><span>${dlabel(p.d,true)}</span></button>`).join('')}</div>`:''}`;
+  return form+cards+hist+gal;
+}
+function photoCompare(ph){
+  const s=[...ph].sort((a,b)=>a.d.localeCompare(b.d)||a.t-b.t),a=s[0],b=s[s.length-1],u=wu();
+  const wa=S.weights.filter(w=>w.d<=a.d).slice(-1)[0],wb=S.weights.filter(w=>w.d<=b.d).slice(-1)[0];
+  const cap=(p,w)=>`<div class="xs mu" style="margin-top:4px">${dlabel(p.d,true)}${w?' · '+wv(w.kg,u)+' '+u:''}</div>`;
+  return`<div class="card"><div class="lbl" style="margin-bottom:8px">First and latest</div><div class="row" style="align-items:flex-start;gap:10px"><div class="grow"><div class="pth big" style="background-image:url(${a.img})"></div>${cap(a,wa)}</div><div class="grow"><div class="pth big" style="background-image:url(${b.img})"></div>${cap(b,wb)}</div></div></div>`;
+}
+function photoModal(m){
+  const p=(S.photos||[]).find(x=>x.id===m.id);if(!p)return'';
+  return`<div class="modal" data-act="mclose"><div style="max-width:560px"><img src="${p.img}" alt="Progress photo" style="width:100%;border-radius:14px;display:block;max-height:70vh;object-fit:contain"><div class="row sp" style="margin-top:12px"><div class="mu sm">${dlabel(p.d,true)}</div><div class="row"><button class="btn red s" data-act="photoDelAsk" data-a="${p.id}">Delete</button><button class="btn s dark" data-act="mclose">Close</button></div></div></div></div>`;
+}
+function shrinkImage(file,max,cb){
+  const fr=new FileReader();
+  fr.onload=()=>{const im=new Image();im.onload=()=>{
+    const k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height);let q=.74,u=c.toDataURL('image/jpeg',q);
+    while(u.length>230000&&q>.4){q-=.1;u=c.toDataURL('image/jpeg',q)}cb(u)};
+    im.onerror=()=>cb(null);im.src=fr.result};
+  fr.onerror=()=>cb(null);fr.readAsDataURL(file);
+}
+
+/* ---------- reminders (Android app only) ---------- */
+const REM_DEF=()=>({on:false,t:'18:00',d:[1,3,5]});
+const DOWS=['S','M','T','W','T','F','S'];
+function remCard(){
+  const P=S.P||S.profile,r=Object.assign(REM_DEF(),P.rem||{}),can=!!window.LegacyNative;
+  return`<div class="card" style="margin-top:20px"><div class="row sp"><div><h3 style="margin:0">Workout reminders</h3><div class="mu sm">${can?'A gentle nudge on the days you pick.':'Reminders work in the Android app.'}</div></div>
+  <button class="btn s ${r.on?'':'dark'}" data-act="remToggle" ${can?'':'disabled'}>${r.on?'On':'Off'}</button></div>
+  ${can&&r.on?`<div class="row" style="margin-top:12px"><span class="sm">Time</span><input type="time" value="${r.t}" data-ch="remTime" style="max-width:150px"></div>
+  <div class="chips" style="margin-top:10px">${DOWS.map((l,i)=>`<button class="chip${r.d.includes(i)?' on':''}" data-act="remDay" data-a="${i}" style="min-width:38px">${l}</button>`).join('')}</div>`:''}</div>`;
+}
+function remSet(fn){[S.profile,S.P].forEach(P=>{if(!P)return;P.rem=Object.assign(REM_DEF(),P.rem||{});fn(P.rem)});saveProfile();applyReminders(true)}
+async function applyReminders(say){
+  const r=S.profile&&S.profile.rem;if(!window.LegacyNative||!r)return;
+  try{
+    const o=await window.LegacyNative.setReminders({on:r.on&&r.d.length>0,hour:+r.t.split(':')[0],min:+r.t.split(':')[1],days:r.d,title:'Time to train',body:S.profile.name?S.profile.name+', your Legacy workout is waiting.':'Your Legacy workout is waiting.'});
+    if(o&&o.ok===false&&say){remSetQuiet(false);toast('Allow notifications for Legacy in Android settings')}
+    else if(say)toast(r.on?'Reminders set':'Reminders off');
+  }catch(e){console.error(e)}
+}
+function remSetQuiet(on){[S.profile,S.P].forEach(P=>{if(P&&P.rem)P.rem.on=on});saveProfile();render()}
+
+/* ---------- friends: monthly leaderboard ---------- */
+const ymOf=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+p2(d.getMonth()+1)};
+function myStats(){
+  const ym=ymOf(Date.now()),ss=allSessions().filter(s=>ymOf(s.s)===ym);
+  return{n:ss.length,vol:Math.round(ss.reduce((a,s)=>a+volumeKg(s.sets),0)),st:streakInfo().days,mo:ym};
+}
+async function pubBoard(){
+  const P=S.profile;if(!DB||!DB.auth||!P||!(P.lb&&P.lb.on))return;
+  try{const id=DB.auth.uid();if(!id)return;await DB.collection('board').doc(id).set(Object.assign({u:S.user,nm:(P.name||S.user).slice(0,20),t:Date.now()},myStats()))}catch(e){console.error('board',e)}
+}
+async function loadBoard(){
+  if(!DB||!DB.auth){S.board={err:'unavailable'};return}
+  S.board=S.board&&S.board.rows?S.board:{loading:true};render();
+  try{await pubBoard();const snap=await DB.collection('board').get();S.board={rows:snap.docs.map(d=>d.data()).filter(x=>x&&x.u)}}catch(e){console.error(e);S.board={err:'failed'}}
+  if(S.tab==='pr'||S.tab2==='pr')render();
+}
+function friendsView(){
+  const P=S.profile,on=!!(P.lb&&P.lb.on),b=S.board,m=S.lbm||'n',ym=ymOf(Date.now());
+  const head=`<div class="card gold"><div class="row sp"><div><div style="font-weight:700">Friends leaderboard</div><div class="mu sm">A friendly monthly challenge. Opt in to appear on it.</div></div><button class="btn s ${on?'':'dark'}" data-act="lbToggle">${on?'On':'Off'}</button></div>
+  <div class="xs mu" style="margin-top:8px">When on, other Legacy users can see your name, username, workouts and volume this month, and your streak. Nothing else. Turn it off and it is removed.</div></div>`;
+  if(!DB||!DB.auth)return head+'<div class="empty">The leaderboard works in the Android app, where everyone shares one database.</div>';
+  if(!on)return head;
+  const seg=`<div class="seg" style="margin:10px 0">${[['n','Workouts'],['vol','Volume'],['st','Streak']].map(([k,l])=>`<button class="${m===k?'on':''}" data-act="lbm" data-a="${k}">${l}</button>`).join('')}</div>`;
+  if(!b||b.loading)return head+seg+'<div class="empty">Loading…</div>';
+  if(b.err)return head+seg+'<div class="empty">Could not load the leaderboard. Check your connection.<br><br><button class="btn s" data-act="lbReload">Try again</button></div>';
+  const u=unit(),val=r=>m==='st'?(r.st||0):(r.mo===ym?(m==='n'?r.n||0:r.vol||0):0);
+  const rows=b.rows.slice().sort((a,c)=>val(c)-val(a)||(a.nm||'').localeCompare(c.nm||''));
+  const fmt=r=>m==='vol'?fmtN(fromKg(val(r),u))+' '+u:m==='st'?val(r)+' day'+(val(r)===1?'':'s'):val(r)+' workout'+(val(r)===1?'':'s');
+  const medal=['🥇','🥈','🥉'];
+  return head+seg+`<div class="card"><div class="lbl" style="margin-bottom:6px">${new Date().toLocaleDateString(undefined,{month:'long',year:'numeric'})}</div>${rows.map((r,i)=>`<div class="setrow"${r.u===S.user?' style="background:color-mix(in srgb,var(--seal) 10%,transparent);border-radius:8px;padding-left:6px;padding-right:6px"':''}><span>${medal[i]||'<span class="mu">'+(i+1)+'.</span>'} <b style="margin:0">${esc(r.nm||r.u)}</b> <span class="xs mu">@${esc(r.u)}</span></span><b style="margin:0">${fmt(r)}</b></div>`).join('')||'<p class="mu sm" style="margin:0">Nobody has joined yet.</p>'}</div>`;
+}
+
+/* ---------- share a workout ---------- */
+function shareCode(ids,name){return'LEGACY1:'+btoa(unescape(encodeURIComponent(JSON.stringify({n:name||'Shared workout',e:ids}))))}
+function readCode(txt){
+  const m=/LEGACY1:([A-Za-z0-9+/=]+)/.exec(txt||'');if(!m)return null;
+  try{const o=JSON.parse(decodeURIComponent(escape(atob(m[1]))));const ids=(o.e||[]).filter(i=>BYID[i]);return ids.length?{n:String(o.n||'Shared workout').slice(0,40),ids}:null}catch(e){return null}
+}
+function shareModal(m){
+  return`<div class="modal" data-act="mclose"><div><h2 style="margin-top:0">Share this workout</h2><p class="mu sm">${esc(m.n)} · ${m.count} exercise${m.count===1?'':'s'}. Send this code to a friend. They open Workout and paste it under "Got a code?".</p>
+  <textarea id="sh_out" readonly rows="4" style="width:100%;font-size:12px" onclick="this.select()">${esc(m.text)}</textarea>
+  <div class="row" style="margin-top:12px"><button class="btn ghost grow" data-act="mclose">Close</button><button class="btn grow" data-act="shareSend">Share</button></div></div></div>`;
+}
+function codeCard(){
+  return`<div class="card"><div class="lbl" style="margin-bottom:6px">Got a code from a friend?</div><div class="row"><input type="text" id="sh_in" placeholder="Paste a LEGACY1 code" autocapitalize="none" autocorrect="off" spellcheck="false" style="min-width:0;flex:1"><button class="btn s" data-act="codeAdd">Add</button></div></div>`;
+}
+
+/* ---------- about, updates, what's new ---------- */
+function aboutCard(){
+  const u=S.update;
+  return`<div class="card" style="margin-top:20px"><div class="row sp"><div><h3 style="margin:0">Legacy v${esc(VER)}</h3><div class="mu sm">${BUILD?'Build '+esc(BUILD):'Development build'}</div></div><button class="btn s dark" data-act="whatsNew">What's new</button></div>
+  ${u?`<div class="xs" style="margin-top:8px;color:var(--au2)">Version ${esc(u.tag.replace(/^v/,''))} is available.</div>`:''}</div>`;
+}
+function updCard(){
+  const u=S.update;if(!u||lsGet('legacy_upd_dismiss')===u.tag)return'';
+  return`<div class="card gold"><div class="row sp"><div><div class="lbl">Update available</div><div style="font-weight:700">Legacy ${esc(u.tag)}</div><div class="xs mu">Download it and install over this one. Your data stays.</div></div><div class="row"><a class="btn s" href="${esc(u.url)}" target="_blank" rel="noopener">Get it</a><button class="x" data-act="updHide" aria-label="Dismiss">✕</button></div></div></div>`;
+}
+function whatsNewModal(){
+  return`<div class="modal" data-act="mclose"><div><div class="lbl">What's new</div><h2 style="margin:4px 0 8px">Legacy v${esc(VER)}</h2>${NOTES.length?`<ul style="margin:0 0 14px;padding-left:18px">${NOTES.map(n=>`<li class="sm" style="margin:4px 0">${esc(n)}</li>`).join('')}</ul>`:'<p class="mu sm">Nothing new listed.</p>'}<button class="btn blk" data-act="mclose">Got it</button></div></div>`;
+}
+async function checkUpdate(){
+  const repo=window.LEGACY_REPO;if(!repo||VER==='dev')return;
+  try{const r=await fetch('https://api.github.com/repos/'+repo+'/releases/latest');if(!r.ok)return;const j=await r.json();
+    if(j&&j.tag_name&&verGt(j.tag_name,VER)){S.update={tag:j.tag_name,url:j.html_url};render()}}catch(e){}
+}
+function announce(){
+  if(!S.profile||S.tour||S.modal)return;
+  if(lsGet('legacy_seen_ver')!==VER){lsSet('legacy_seen_ver',VER);if(NOTES.length&&VER!=='dev'){S.modal={type:'whatsnew'};render()}}
+}
+
+/* ---------- two panes on big screens ---------- */
+const PANE2=[['cal','Calendar'],['home','Home'],['pr','Progress'],['lib','Exercises'],['learn','Learn']];
+const wideOK=()=>window.innerWidth>=840&&window.innerHeight>=460&&lsGet('legacy_two')!=='off'&&!S.tour;
+function pane2Tab(){
+  let t=S.tab2||'cal';if(t===S.tab||!PANE2.some(p=>p[0]===t))t=(PANE2.find(p=>p[0]!==S.tab)||PANE2[0])[0];return t;
+}
+function paneBar(t){
+  return`<div class="pbar">${PANE2.filter(p=>p[0]!==S.tab).map(([k,l])=>`<button class="chip${t===k?' on':''}" data-act="tab2" data-a="${k}">${l}</button>`).join('')}<button class="chip" data-act="twoToggle" style="margin-left:auto">Single view</button></div>`;
+}
+
+Object.assign(A,{
+ useHint(x){const h=hintFor(x);if(!h)return;const d=draftFor(x);if(h.d!=null)d.d=h.d;if(h.r!=null)d.r=h.r;if(h.w!=null)d.w=h.w;saveActive();render()},
+ restToday(){
+  const P=S.profile,t=today();P.plan=P.plan||[];
+  const i=P.plan.findIndex(p=>p.d===t&&p.n==='Rest day');
+  if(i>=0){P.plan.splice(i,1);toast('Back to a normal day')}else{P.plan.push({id:'p'+Date.now().toString(36)+P.plan.length,d:t,n:'Rest day'});toast('Enjoy your rest day')}
+  saveProfile();render();
+ },
+ measSave(){
+  const u=waistU(),d=($('#m_d')||{}).value||today(),e={d},mul=HF[u]||1;let any=false;
+  MEAS.forEach(([k])=>{const v=readNum('#m_'+k);if(v!=null&&v>0){e[k]=rnd(v*mul,1);any=true}});
+  if(!any){toast('Enter at least one measurement');return}
+  const es=(S.meas||[]).slice(),i=es.findIndex(x=>x.d===d);
+  if(i>=0)es[i]=Object.assign({},es[i],e);else es.push(e);
+  es.sort((a,b)=>a.d.localeCompare(b.d));S.meas=es;saveMeas();toast('Saved');render();
+ },
+ measDel(d){S.meas=(S.meas||[]).filter(e=>e.d!==d);saveMeas();render()},
+ photoPick(){const el=$('#ph_in');if(el)el.click()},
+ photoOpen(id){S.modal={type:'photo',id};render()},
+ photoDelAsk(id){S.modal={type:'confirm',title:'Delete this photo?',msg:'This cannot be undone.',act:'photoDel',arg:id,ok:'Delete',red:1};render()},
+ async photoDel(id){
+  S.modal=null;S.photos=(S.photos||[]).filter(p=>p.id!==id);render();
+  try{await col.doc(S.user+':ph_'+id).delete()}catch(e){toast('Could not delete')}
+ },
+ remToggle(){const r=Object.assign(REM_DEF(),(S.P||S.profile).rem||{});remSet(x=>{x.on=!r.on});render()},
+ remDay(a){const i=+a;remSet(x=>{x.d=x.d.includes(i)?x.d.filter(y=>y!==i):[...x.d,i].sort()});render()},
+ async lbToggle(){
+  const P=S.profile,on=!(P.lb&&P.lb.on);[S.profile,S.P].forEach(p=>{if(p)p.lb={on}});saveProfile();
+  if(on){S.board=null;loadBoard()}else{try{const id=DB.auth&&DB.auth.uid();if(id)await DB.collection('board').doc(id).delete()}catch(e){}S.board=null;render()}
+ },
+ lbm(a){S.lbm=a;render()},
+ lbReload(){S.board=null;loadBoard()},
+ shareWk(){const s=S.sess;if(!s||!s.exs.length)return;A._share(s.exs,s.sd||'My workout')},
+ shareSess(id){const s=allSessions().find(x=>x.id===id);if(!s)return;A._share([...new Set(s.sets.map(t=>t.x))],s.sd||('Workout '+dlabel(dkey(s.s),true)))},
+ _share(ids,n){const text='Try my Legacy workout "'+n+'". Open Legacy, go to Workout, and paste this code under "Got a code?":\n'+shareCode(ids,n);S.modal={type:'sharecode',n,count:ids.length,text};render()},
+ shareSend(){
+  const m=S.modal;if(!m)return;
+  const copy=()=>{try{navigator.clipboard.writeText(m.text).then(()=>toast('Copied. Paste it to your friend'),()=>{const e=$('#sh_out');if(e){e.select();toast('Select and copy the text')}})}catch(e){const el=$('#sh_out');if(el){el.select();toast('Select and copy the text')}}};
+  if(navigator.share){navigator.share({text:m.text}).catch(copy)}else copy();
+ },
+ codeAdd(){
+  const c=readCode(($('#sh_in')||{}).value);
+  if(!c){toast('That code did not work');return}
+  startSession(c.ids);S.sess.sd=c.n;saveActive();toast('Added '+c.ids.length+' exercises');render();
+ },
+ whatsNew(){S.modal={type:'whatsnew'};render()},
+ updHide(){if(S.update)lsSet('legacy_upd_dismiss',S.update.tag);render()},
+ tab2(a){S.tab2=a;render()},
+ twoToggle(){lsSet('legacy_two',lsGet('legacy_two')==='off'?'on':'off');render()}
+});
+{const _pt=A.ptab;A.ptab=a=>{_pt(a);if(a==='fr')loadBoard()}}
+{let _w=null;window.addEventListener('resize',()=>{clearTimeout(_w);_w=setTimeout(()=>{if(S.profile&&document.body.classList.contains('wide')!==wideOK())render()},150)})}
+Object.assign(CH,{
+ photo(v,a,el){
+  const f=el.files&&el.files[0];if(!f)return;
+  if((S.photos||[]).length>=40){toast('Photo limit reached (40). Delete one first');return}
+  toast('Adding photo…');
+  shrinkImage(f,720,u=>{if(!u){toast('Could not read that photo');return}
+   const p={id:'p'+Date.now().toString(36),d:today(),t:Date.now(),img:u};S.photos=[...(S.photos||[]),p];persist('ph_'+p.id,()=>p);toast('Photo saved');render()});
+ },
+ remTime(v){remSet(x=>{x.t=v||'18:00'})}
+});
+{const _fin=A.finish;A.finish=function(){_fin.apply(this,arguments);setTimeout(pubBoard,400)}}
+
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]');if(!el)return;
   const f=A[el.dataset.act];if(f){if(el.tagName==='A'||(el.classList.contains('modal')&&e.target!==el))return;f(el.dataset.a,el.dataset.b,el)}

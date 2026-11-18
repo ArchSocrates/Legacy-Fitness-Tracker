@@ -2,12 +2,19 @@
   "name": "legacy-fitness-tracker",
   "version": "1.0.0",
   "private": true,
-  "scripts": { "build": "node scripts/build.mjs" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "icons": "node scripts/icons.mjs"
+  },
   "dependencies": {
     "@capacitor/android": "^6.1.2",
     "@capacitor/cli": "^6.1.2",
     "@capacitor/core": "^6.1.2",
-    "firebase": "^10.14.1"
+    "firebase": "^10.14.1",
+    "@capacitor/local-notifications": "^6.1.0"
   },
-  "devDependencies": { "esbuild": "^0.24.0" }
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "sharp": "^0.33.5"
+  }
 }
