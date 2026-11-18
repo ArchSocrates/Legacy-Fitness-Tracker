@@ -1,0 +1,7 @@
+{
+  "appId": "com.legacy.fitness",
+  "appName": "Legacy",
+  "webDir": "www",
+  "android": { "allowMixedContent": false },
+  "backgroundColor": "#1c1814"
+}
