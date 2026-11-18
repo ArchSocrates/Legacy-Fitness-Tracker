@@ -658,7 +658,7 @@ async function submitAuth(mode){
     }
     if(rm){try{localStorage.setItem('legacy_session',JSON.stringify({u,k:await crypto.subtle.exportKey('jwk',key)}))}catch(e){}}
     enter(u,key);
-  }catch(e){console.error(e);fail('Something went wrong. Check your connection and try again.')}
+  }catch(e){console.error(e);fail('Something went wrong. Check your connection and try again.'+(e&&(e.code||e.message)?' ['+String(e.code||e.message).slice(0,90)+']':''))}
 }
 function resetState(){
   try{unsub&&unsub()}catch(e){}unsub=null;
