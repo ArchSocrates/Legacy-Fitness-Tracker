@@ -586,6 +586,7 @@ async function init(){
     const r=JSON.parse(localStorage.getItem('legacy_session')||'null');
     if(r&&r.u&&r.k){
       const key=await crypto.subtle.importKey('jwk',r.k,{name:'AES-GCM'},true,['encrypt','decrypt']);
+      if(db.auth){await db.auth.ready();if(!db.auth.is(r.u))throw 0}
       const a=await db.doc('accts/'+r.u).get();
       if(a.exists){try{await open(key,a.data().chk);enter(r.u,key);return}catch(e){}}
     }
@@ -616,6 +617,7 @@ function authScreen(mode,msg,uval){
   const go=()=>submitAuth(mode);$('#a_go').onclick=go;
   $$('#a_u,#a_p,#a_p2').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter')go()}));
 }
+async function deriveFb(u,pw){const km=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveBits']);const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:enc.encode('legacy-fb:'+u),iterations:200000,hash:'SHA-256'},km,256);return b64(new Uint8Array(bits))}
 async function submitAuth(mode){
   const u=normU($('#a_u').value),pw=$('#a_p').value,up=mode==='up',btn=$('#a_go');
   const fail=m=>authScreen(mode,m,u);
@@ -624,10 +626,28 @@ async function submitAuth(mode){
   if(up&&pw!==$('#a_p2').value)return fail('Passwords do not match.');
   const rm=$('#a_rm').checked;btn.disabled=true;btn.textContent='One moment…';
   try{
-    const ref=DB.doc('accts/'+u),snap=await ref.get();
-    let key;
+    const ref=DB.doc('accts/'+u),A=DB.auth;
+    let key,snap=null;
+    if(A){
+      const fp=await deriveFb(u,pw);
+      if(up){
+        try{await A.signUp(u,fp)}
+        catch(e){
+          if(e&&e.code==='auth/email-already-in-use'){
+            /* an earlier sign-up may have stopped halfway: finish it only if it is truly empty */
+            let ok=false;try{await A.signIn(u,fp);ok=!(await ref.get()).exists}catch(e2){}
+            if(!ok)return fail('That username is taken. Try another.');
+          }else throw e;
+        }
+      }else{
+        try{await A.signIn(u,fp)}
+        catch(e){if(e&&/invalid-credential|user-not-found|wrong-password|invalid-email/.test(e.code||''))return fail('Wrong username or password.');throw e}
+        snap=await ref.get();
+        if(!snap.exists)return fail('This account was not finished setting up. Create it again with the same username and password.');
+      }
+    }else snap=await ref.get();
     if(up){
-      if(snap.exists)return fail('That username is taken. Try another.');
+      if(snap&&snap.exists)return fail('That username is taken. Try another.');
       const salt=crypto.getRandomValues(new Uint8Array(16));
       key=await deriveKey(pw,salt,IT);
       await ref.set({salt:b64(salt),it:IT,chk:await seal(key,{ok:'legacy'})});
@@ -645,7 +665,7 @@ function resetState(){
   Object.assign(S,{nav:[],_lt:null,gd:null,user:null,loaded:false,slow:false,profile:null,weights:[],logs:{},sess:null,tab:'home',P:null,modal:null,todayEq:['bw'],openSess:null,legChecked:false,filter:{q:'',m:'All',all:false,lim:60}});
   Object.keys(W).forEach(k=>delete W[k]);T=null;KEY=null;
 }
-function signOut(){try{localStorage.removeItem('legacy_session')}catch(e){}resetState();authScreen('in')}
+function signOut(){try{localStorage.removeItem('legacy_session')}catch(e){}try{DB&&DB.auth&&DB.auth.signOut()}catch(e){}resetState();authScreen('in')}
 function enter(u,key){
   resetState();S.user=u;KEY=key;loadActive();render();
   const slowT=setTimeout(()=>{if(!S.loaded){S.slow=true;render()}},10000);
@@ -1802,7 +1822,7 @@ const A={
  async wipe(){
   const u=S.user,ids=['profile','weights',...Object.keys(S.logs).map(m=>'log_'+m)];
   S.modal=null;
-  try{await Promise.all(ids.map(i=>col.doc(u+':'+i).delete()));await DB.doc('accts/'+u).delete()}catch(e){toast('Could not delete everything');return}
+  try{await Promise.all(ids.map(i=>col.doc(u+':'+i).delete()));await DB.doc('accts/'+u).delete();if(DB.auth){try{await DB.auth.deleteUser()}catch(e){}}}catch(e){toast('Could not delete everything');return}
   try{localStorage.removeItem(ACT_KEY())}catch(e){}
   signOut();
  },
