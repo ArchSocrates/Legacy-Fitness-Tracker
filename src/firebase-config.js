@@ -1,9 +1,8 @@
-// Paste your Firebase web app config here (Firebase console > Project settings > Your apps).
 export default {
-  apiKey: "REPLACE_ME",
-  authDomain: "REPLACE_ME.firebaseapp.com",
-  projectId: "REPLACE_ME",
-  storageBucket: "REPLACE_ME.appspot.com",
-  messagingSenderId: "REPLACE_ME",
-  appId: "REPLACE_ME"
+  apiKey: "AIzaSyCLc3Mi4OKeoMsA5KTiv2gG7sACrm7C_l4",
+  authDomain: "legacy-fitness-tracker.firebaseapp.com",
+  projectId: "legacy-fitness-tracker",
+  storageBucket: "legacy-fitness-tracker.firebasestorage.app",
+  messagingSenderId: "886555952245",
+  appId: "1:886555952245:web:2e988457c88d556fdce43c"
 };
