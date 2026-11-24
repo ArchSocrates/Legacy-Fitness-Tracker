@@ -29,7 +29,9 @@ body{padding-top:env(safe-area-inset-top);min-height:100vh}
 h2{width:fit-content;}
 .gear{display:flex;align-items:center;gap:8px;background:var(--field);color:var(--tx);border:var(--bw) solid var(--bd);box-shadow:3px 3px 0 var(--shd);padding:8px 12px;font-family:var(--disp);font-size:14px;margin-top:18px}.gear:active{transform:translate(2px,2px);box-shadow:none}
 h2{max-width:100%;background:var(--panel);padding:4px 12px 4px 6px}
-#app>.xs.mu,#app>.sm.mu,.pane>.xs.mu,.pane>.sm.mu,#app>.mu,.pane>.mu{background:var(--panel);width:fit-content;max-width:100%;padding:2px 8px}
+#app>.xs.mu,#app>.sm.mu,.pane>.xs.mu,.pane>.sm.mu,#app>.mu,.pane>.mu,#app>.hero,.pane>.hero,#app>.quote,.pane>.quote,.lock .word,.lock>.mu,.lock>.hero,.lock .quote,.lock>p{background:var(--panel);width:fit-content;max-width:100%;padding:2px 8px}
+.top{background:var(--panel);margin:0 -16px;padding:12px 16px 8px;position:relative;z-index:2}
+.lock .word{padding:6px 4px 6px 14px}
 h1,h2,h3,.disp{font-family:var(--disp);margin:0;font-weight:400;letter-spacing:.005em}
 h2{font-size:30px;margin:30px 0 12px;line-height:1.1;display:flex;align-items:center;gap:12px}
 h2::before{content:'';width:9px;height:24px;background:var(--seal);border-radius:1px;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
@@ -553,29 +555,29 @@ function thrFn(style){
   if(style==='dots')return(x,y)=>{const u=((x+y)%6+6)%6-2.5,v=((x-y)%6+6)%6-2.5;return Math.min(1,Math.hypot(u,v)/3.6)};
   if(style==='lines')return(x,y)=>(((y%4)+.5)/4+(x%2?.07:0))%1;
   if(style==='noise')return(x,y)=>hash2(x,y,7);
+  if(style==='stipple'){const b=bayerFn(4);return(x,y)=>(b(x,y)*.45+hash2(x,y,7)*.55)}
   return bayerFn(8);
 }
-const DITHERS=[['bayer8','Fine'],['bayer4','Chunky'],['dots','Halftone'],['lines','Lines'],['noise','Noise']];
+const DITHERS=[['stipple','Stipple'],['bayer8','Fine'],['bayer4','Chunky'],['dots','Halftone'],['lines','Lines'],['noise','Noise']];
 /* colour helpers (hsl) */
 function rgb2hsl([r,g,b]){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let h=0,s=0;const l=(mx+mn)/2;if(mx!==mn){const d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);h=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;h*=60}return[h,s,l]}
 function hsl2hex(h,s,l){h=((h%360)+360)%360/360;const f=(p,q,t)=>{t=(t+1)%1;return t<1/6?p+(q-p)*6*t:t<1/2?q:t<2/3?p+(q-p)*(2/3-t)*6:p};let r,g,b;if(!s){r=g=b=l}else{const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q;r=f(p,q,h+1/3);g=f(p,q,h);b=f(p,q,h-1/3)}return r2h([r*255,g*255,b*255])}
 const hueOf=hex=>rgb2hsl(h2r(hex))[0];
 const retint=(hex,hue,sm)=>{const[,s,l]=rgb2hsl(h2r(hex));return hsl2hex(hue,clamp(s*sm,0,1),l)};
 const rgba=(hex,a)=>{const c=h2r(hex);return'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'};
-/* three colours: background, ink (mountain + text), accent (sun + highlights) */
+/* four colours: background, highlight (also the text), main tone (also buttons), rim light */
 const PRESETS=[
- ['Classic','#f7f6f2','#121212','#e0452b'],['Night','#0f0f10','#f2f1ec','#e0452b'],['Ocean','#f6f7f7','#121416','#1f7fd1'],
- ['Forest','#f6f6f1','#131512','#2f9b5b'],['Gold','#101010','#f3efe4','#e3a21c'],['Rose','#fbf7f6','#161214','#de4f7f'],
- ['Mono','#ffffff','#000000','#8a8a8a'],['Ink','#e9e6dd','#1d2a44','#e06a2b']
+ ['Neon','#100720','#d8f6ff','#ff2e6e','#18d6e8'],['Toxic','#07140d','#eaffdf','#3dff8a','#ff3fd2'],['Sunset','#170914','#ffe9c7','#ff7a2e','#b44dff'],
+ ['Abyss','#040f1c','#dff6ff','#2a8cff','#ffd23f'],['Blood','#0c0606','#ffe6e0','#e3263b','#ff9a3d'],['Mono','#050505','#f4f4f4','#8f8f8f','#d0d0d0'],
+ ['Paper','#f1ece0','#141414','#e0452b','#1f7fd1'],['Riso','#f6efe6','#1d2a6b','#ff4f7b','#00a38a']
 ];
-const LOOK_DEF={bg:'#f7f6f2',ink:'#121212',acc:'#e0452b',dith:'bayer8',px:4,mot:'auto',tmr:'auto',v:3};
+const LOOK_DEF={bg:'#100720',ink:'#d8f6ff',acc:'#ff2e6e',acc2:'#18d6e8',dith:'stipple',px:4,mot:'auto',tmr:'auto',v:4};
 const isHex=c=>typeof c==='string'&&/^#[0-9a-f]{6}$/i.test(c);
 function normLook(j){
   const o=Object.assign({},LOOK_DEF);if(!j||typeof j!=='object')return o;
-  ['dith','mot','tmr'].forEach(k=>{if(typeof j[k]==='string')o[k]=j[k]});if([3,4,6].includes(+j.px))o.px=+j.px;
-  if(j.v===3){['bg','ink','acc'].forEach(k=>{if(isHex(j[k]))o[k]=j[k].toLowerCase()})}
-  else if(j.pal==='custom'&&isHex(j.acc))o.acc=j.acc.toLowerCase(); // older look settings: keep a custom accent, drop the rest
-  return o;
+  ['mot','tmr'].forEach(k=>{if(typeof j[k]==='string')o[k]=j[k]});if([3,4,6].includes(+j.px))o.px=+j.px;
+  if(j.v===4){['bg','ink','acc','acc2'].forEach(k=>{if(isHex(j[k]))o[k]=j[k].toLowerCase()});if(typeof j.dith==='string')o.dith=j.dith}
+  return o; // older looks move to the new stippled style
 }
 let LOOK=Object.assign({},LOOK_DEF);
 (function(){try{LOOK=normLook(JSON.parse(localStorage.getItem('legacy_look')||'null'))}catch(e){}})();
@@ -585,8 +587,7 @@ const contrast=(a,b)=>{const x=lumOf(a),y=lumOf(b);return(Math.max(x,y)+.05)/(Ma
 function lookTheme(){
   const bg=LOOK.bg,L=lumOf(bg)>.4;let ink=LOOK.ink;
   if(contrast(bg,ink)<3)ink=L?'#121212':'#f2f1ec'; // keep text readable whatever colours are picked
-  const acc=LOOK.acc;
-  return{light:L,bg,ink,acc,sky1:bg,sky2:bg,orb:acc,accL:acc,accD:acc,m3:ink};
+  return{light:L,bg,ink,acc:LOOK.acc,acc2:LOOK.acc2,sky1:bg,sky2:bg,orb:LOOK.acc,accL:LOOK.acc,accD:LOOK.acc,m3:ink};
 }
 function tileUri(color,kind){
   const c=encodeURIComponent(color);
@@ -599,7 +600,7 @@ function themeVars(th){
   const ok=tx,bad=L?'#c62828':'#ff7a7a',shd=tx,mu=mix(tx,bg,.38);
   // accent used as text on the background must stay readable: nudge it toward the ink if needed
   const accT=contrast(acc,base)>=2.6?acc:mix(acc,tx,.45);
-  const v={'--sky1':bg,'--sky2':bg,'--m1':tx,'--m2':tx,'--m3':tx,'--orb':acc,
+  const v={'--acc2':th.acc2,'--sky1':bg,'--sky2':bg,'--m1':tx,'--m2':tx,'--m3':tx,'--orb':acc,
    '--tx':tx,'--mu':mu,'--line':rgba(tx,.26),'--track':rgba(tx,.16),'--ink':tx,'--bd':tx,'--shd':shd,
    '--seal':accT,'--panel':base,'--panel-s':base,'--field':field,'--field2':field2,
    '--acc':accT,'--acc-t':lumOf(accT)>.38?'#121212':'#ffffff','--ok':ok,'--bad':bad,
@@ -608,50 +609,63 @@ function themeVars(th){
   [['acc',accT,[12,14,18,22,25,50]],['seal',accT,[8,10]],['ok',ok,[16,20]],['bad',bad,[14,16,45]]].forEach(([n,c,ls])=>ls.forEach(a=>{v['--'+n+'-'+a]=rgba(c,a/100)}));
   return v;
 }
-/* ---- the scene: one mountain, one sun, three colours. Drawn once, redrawn only when size or colours change ---- */
+/* ---- the scene: a stippled, slowly lit kettlebell in drifting stipple clouds ----
+   The 3D shape is ray-marched once per screen size into a normal map; each frame only relights it and
+   moves the clouds, so animation is cheap. Tones map to the palette: background → main tone → highlight,
+   with the rim light in the fourth colour. */
 const vnoise=(x,y,s)=>{const xi=Math.floor(x),yi=Math.floor(y),fx=x-xi,fy=y-yi,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy),a=hash2(xi,yi,s),b=hash2(xi+1,yi,s),c=hash2(xi,yi+1,s),d=hash2(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v};
-let _sceneKey='';
+let OBJ={key:''};
+function kbSDF(x,y,z){
+  // bell: sphere with a flat base
+  const bell=Math.max(Math.sqrt(x*x+y*y+z*z)-1,-(y+.86));
+  // handle: torus turned a little toward the viewer
+  const c=Math.cos(.55),s=Math.sin(.55),qx=c*x+s*z,qz=-s*x+c*z,qy=y-1.12;
+  const ring=Math.sqrt(qx*qx+qy*qy)-.64,hd=Math.sqrt(ring*ring+qz*qz)-.17;
+  const k=.16,h=clamp(.5+.5*(hd-bell)/k,0,1);return hd*(1-h)+bell*h-k*h*(1-h);
+}
+function buildObj(W,H){
+  const key=W+'x'+H;if(OBJ.key===key)return OBJ;
+  const tall=H>W,R=tall?W*.34:H*.3,cx=W*(tall?.64:.76),cy=H*(tall?.74:.66);
+  const n=new Float32Array(W*H*3),m=new Uint8Array(W*H);
+  for(let py=0;py<H;py++){const Y=-(py-cy)/R;if(Y<-.9||Y>2)continue;
+   for(let px=0;px<W;px++){const X=(px-cx)/R;if(X<-1.15||X>1.15)continue;
+    let z=-2,hit=false;for(let i=0;i<48;i++){const d=kbSDF(X,Y,z);if(d<.003){hit=true;break}z+=d;if(z>2)break}
+    if(!hit)continue;const e=.004,j=py*W+px;
+    let nx=kbSDF(X+e,Y,z)-kbSDF(X-e,Y,z),ny=kbSDF(X,Y+e,z)-kbSDF(X,Y-e,z),nz=kbSDF(X,Y,z+e)-kbSDF(X,Y,z-e);const l=Math.hypot(nx,ny,nz)||1;
+    n[j*3]=nx/l;n[j*3+1]=ny/l;n[j*3+2]=nz/l;m[j]=1}}
+  OBJ={key,n,m,W,H};return OBJ;
+}
+let _sceneKey='',_sceneT=0;
 function renderScene(cv,th,min,tt,dims){
   const px=LOOK.px,W=dims?dims[0]:Math.max(8,Math.ceil(innerWidth/px)),H=dims?dims[1]:Math.max(8,Math.ceil(innerHeight/px));
-  const key=[W,H,th.bg,th.ink,th.acc,LOOK.dith].join('|');
-  if(!dims&&key===_sceneKey&&cv.width===W)return;
   if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H}
   const ctx=cv.getContext&&cv.getContext('2d');if(!ctx)return;
-  const img=ctx.createImageData(W,H),d=img.data,thr=thrFn(LOOK.dith);
-  const BG=h2r(th.bg),INK=h2r(th.ink),ACC=h2r(th.acc);
-  const put=(i,c)=>{d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255};
-  // shape: a far ridge (dithered, reads lighter) and the main peak (solid), sitting in the lower part of the screen
-  const tall=H>W,peakX=tall?.46:.6,peakY=tall?.7:.62,baseY=tall?.9:.9;
-  const far=new Float32Array(W),near=new Float32Array(W);
-  for(let x=0;x<W;x++){
-    const u=x/W;
-    const f1=Math.max(0,1-Math.abs(u-(tall?.22:.24))/.34),f2=Math.max(0,1-Math.abs(u-(tall?.86:.9))/.3);
-    far[x]=H*(baseY-.02)-H*(.14*Math.pow(f1,1.25)+.1*Math.pow(f2,1.2))+(vnoise(x*.25,3,3)-.5)*H*.012;
-    const k=Math.max(0,1-Math.abs(u-peakX)/(tall?.62:.42));
-    near[x]=H*baseY-H*(baseY-peakY)*Math.pow(k,1.35)+(vnoise(x*.3,9,11)-.5)*H*.014*k;
-  }
-  const sx=W*(tall?.72:.76),sy=H*(peakY-.015),sr=Math.max(3,Math.min(W,H)*(tall?.075:.085));
-  const snow=H*peakY+H*(baseY-peakY)*.22,lightL=sx<W*peakX;
+  const O=buildObj(W,H),img=ctx.createImageData(W,H),d=img.data,thr=thrFn(LOOK.dith);
+  const BG=h2r(th.bg),A=h2r(th.acc),HI=h2r(th.ink),A2=h2r(th.acc2||th.acc),t=tt||0;
+  // key light circles slowly; rim light stays on the left
+  const la=t*.12,lx0=Math.cos(la)*.95+.1,ly0=.62,lz0=-.32-Math.sin(la)*.22,ll=Math.hypot(lx0,ly0,lz0),lx=lx0/ll,ly=ly0/ll,lz=lz0/ll;
+  const hx=lx,hy=ly,hz=lz-1,hl=Math.hypot(hx,hy,hz);
+  const sc=.035,dr=t*.05;
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){
-    const i=(y*W+x)*4,t=thr(x,y);let c=BG;
-    if(y>=near[x]){
-      c=INK;
-      // snow cap with a ragged dithered edge, and a lit face toward the sun
-      const edge=snow+Math.sin(x*.9)*1.2+(hash2(x,0,5)-.5)*2;
-      if(y<edge)c=BG;else if(y<edge+3&&t<.5)c=BG;
-      else{const sd=(lightL?W*peakX-x:x-W*peakX)/(W*.42);if(sd>0){const dy=(y-near[x])/(H*.16),g=clamp(sd*5,0,1)*clamp(1-sd,0,1)*clamp(1-dy,0,1);if(t<g*.32)c=BG}}
-    }else if(y>=far[x]){
-      c=t<.42?INK:BG; // far ridge: half-tone ink
+    const j=y*W+x,i=j*4,tr=thr(x,y);let tone,rim=0;
+    if(O.m[j]){
+      const nx=O.n[j*3],ny=O.n[j*3+1],nz=O.n[j*3+2];
+      const dif=Math.max(0,nx*lx+ny*ly+nz*lz),spec=Math.pow(Math.max(0,(nx*hx+ny*hy+nz*hz)/hl),22);
+      tone=clamp(.17+.58*Math.pow(dif,1.5)+.6*spec,0,1);
+      rim=Math.pow(clamp(1+nz,0,1),2.2)*Math.max(0,-nx*.9+ny*.2);
     }else{
-      const dx=x-sx,dy=y-sy,dd=Math.sqrt(dx*dx+dy*dy);
-      if(dd<=sr)c=ACC;
-      else if(dd<sr*1.9){const g=1-(dd-sr)/(sr*.9);if(t<g*g*.42)c=ACC}
+      // clouds: domain-warped noise, kept low so the background stays dark and sparse
+      const wx=vnoise(x*sc*.6+dr,y*sc*.6,3)*3,wy=vnoise(x*sc*.6,y*sc*.6-dr,8)*3;
+      const f=vnoise(x*sc+wx,y*sc+wy+dr*.5,5)*.7+vnoise(x*sc*2.3+wx,y*sc*2.3,9)*.3;
+      const vig=1-Math.min(1,Math.hypot(x/W-.55,y/H-.45)*1.1);
+      tone=clamp((f-.5)*1.1,0,.34)*(.45+.55*vig);
+      const g=vnoise(x*sc*.8-dr*.7,y*sc*.8+40,13);rim=clamp((g-.7)*2,0,.28)*(1-vig*.5);
     }
-    put(i,c);
+    let c=tone<.5?(tone*2>tr?A:BG):((tone-.5)*2>tr?HI:A);
+    if(rim>hash2(x+7,y+3,11)*.9+.05)c=A2;
+    d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255;
   }
-  // ground line
-  for(let y=Math.floor(H*baseY)+1;y<H;y++)for(let x=0;x<W;x++)put((y*W+x)*4,INK);
-  ctx.putImageData(img,0,0);if(!dims)_sceneKey=key;
+  ctx.putImageData(img,0,0);
 }
 function buildSky(){
   if($('#sky'))return;
@@ -660,13 +674,18 @@ function buildSky(){
   let fx=document.createElement('div');fx.id='fx';document.body.appendChild(fx);
   let wp=document.createElement('canvas');wp.id='wipe';document.body.appendChild(wp);
 }
-let _skyTh=null,_skyMin=0;
+let _skyTh=null,_skyMin=0,_animT=null,_animGap=160;
+function sceneFrame(){
+  const cv=$('#dc');if(cv&&_skyTh){const t0=performance.now();renderScene(cv,_skyTh,0,Date.now()/1000);const ms=performance.now()-t0;
+    _animGap=Math.min(1500,Math.max(LOOK.mot==='calm'?400:140,ms*5))} // never spend more than about a fifth of the time drawing
+}
+function animLoop(){clearTimeout(_animT);if(!motionOn())return;_animT=setTimeout(()=>{if(!document.hidden)sceneFrame();animLoop()},_animGap)}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)animLoop()});
 function applySky(force){
   const th=lookTheme(),v=themeVars(th),root=document.documentElement;
   Object.entries(v).forEach(([k,x])=>root.style.setProperty(k,x));
   root.dataset.mode=th.light?'light':'dark';root.dataset.mot=motionOn()?'on':'off';
-  _skyTh=th;_skyMin=0;if(force)_sceneKey='';
-  const cv=$('#dc');if(cv)renderScene(cv,th,0,0);
+  _skyTh=th;_skyMin=0;sceneFrame();animLoop();
   let m=document.querySelector('meta[name=theme-color]');if(!m){m=document.createElement('meta');m.name='theme-color';document.head.appendChild(m)}m.content=th.bg;
 }
 function fitMtn(){clearTimeout(fitMtn._t);fitMtn._t=setTimeout(()=>applySky(true),120)}
@@ -746,12 +765,12 @@ function dtHtml(kind,txt,big){
 /* ---- appearance card (You tab) ---- */
 function lookCard(){
   const seg=(key,list)=>`<div class="seg" style="flex-wrap:wrap">${list.map(([v,l])=>`<button class="${String(LOOK[key])===String(v)?'on':''}" data-act="lookSet" data-a="${key}" data-b="${v}">${l}</button>`).join('')}</div>`;
-  const cur=[LOOK.bg,LOOK.ink,LOOK.acc].join();
-  const pre=PRESETS.map((p,i)=>`<button class="pal${p.slice(1).join()===cur?' on':''}" data-act="lookPreset" data-a="${i}" aria-label="${p[0]}"><i style="background:${p[1]};background-image:none;box-shadow:inset 0 0 0 3px ${p[2]}"><b style="display:block;width:45%;height:45%;margin:27% auto 0;border-radius:50%;background:${p[3]}"></b></i><span>${p[0]}</span></button>`).join('');
+  const cur=[LOOK.bg,LOOK.ink,LOOK.acc,LOOK.acc2].join();
+  const pre=PRESETS.map((p,i)=>`<button class="pal${p.slice(1).join()===cur?' on':''}" data-act="lookPreset" data-a="${i}" aria-label="${p[0]}"><i style="background:${p[1]};background-image:none;display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:5px;box-sizing:border-box"><b style="background:${p[3]}"></b><b style="background:${p[2]}"></b><b style="background:${p[4]}"></b><b style="background:${p[3]};opacity:.5"></b></i><span>${p[0]}</span></button>`).join('');
   const pick=(k,l)=>`<label class="sm" style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">${l}<input type="color" value="${LOOK[k]}" data-ch="lookColor" data-a="${k}" style="width:64px;height:42px;padding:2px;min-height:0"></label>`;
-  return`<div class="card" style="margin-top:20px"><h3>Appearance</h3><p class="mu sm" style="margin-top:0">Three colours run the whole app: the background, the ink for the mountain and text, and one accent for the sun and highlights.</p>
+  return`<div class="card" style="margin-top:20px"><h3>Appearance</h3><p class="mu sm" style="margin-top:0">Four colours run the whole app and the stippled artwork behind it: the background, the highlight (also used for text), the main tone (also used for buttons) and the rim light.</p>
   <div class="lbl" style="margin:12px 0 8px">Presets</div><div class="pals">${pre}</div>
-  <div class="lbl" style="margin:14px 0 8px">Your colours</div><div class="row" style="gap:16px;flex-wrap:wrap">${pick('bg','Background')}${pick('ink','Mountain and text')}${pick('acc','Accent')}</div>
+  <div class="lbl" style="margin:14px 0 8px">Your colours</div><div class="row" style="gap:16px;flex-wrap:wrap">${pick('bg','Background')}${pick('ink','Highlight and text')}${pick('acc','Main tone')}${pick('acc2','Rim light')}</div>
   ${contrast(LOOK.bg,LOOK.ink)<3?'<p class="sm" style="color:var(--bad);margin:8px 0 0">Those two colours are too close, so text uses black or white to stay readable.</p>':''}
   <div class="lbl" style="margin:14px 0 8px">Dither style</div>${seg('dith',DITHERS)}
   <div class="lbl" style="margin:14px 0 8px">Pixel size</div>${seg('px',[[3,'Fine'],[4,'Normal'],[6,'Chunky']])}
@@ -2853,7 +2872,7 @@ function weekStats(){
 async function recapCanvas(){
   const W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');if(!x)return null;
   const low=document.createElement('canvas'),px=5,lw=W/px,lh=H/px;
-  const th=lookTheme(skyMinute());renderScene(low,th,skyMinute(),0,[lw,lh]);
+  const th=lookTheme();OBJ.key='';renderScene(low,th,0,0,[lw,lh]);OBJ.key='';
   x.imageSmoothingEnabled=false;x.drawImage(low,0,0,W,H);
   const cs=getComputedStyle(document.documentElement),g=k=>cs.getPropertyValue(k).trim(),ink=g('--tx')||'#111',panel=g('--panel-s')||'#f8f1e2',acc=g('--acc')||'#c8391f';
   try{await Promise.all([document.fonts.load('700 60px "Pixelify Sans"'),document.fonts.load('60px LgNum','0123456789')])}catch(e){}
@@ -2892,7 +2911,7 @@ meView=function(){return _mev()+rankCard(true)};
 
 /* ================= v2: what's new, native bridge, back button, links ================= */
 const WN=[
- {g:'peak',t:'A whole new look',x:'Legacy now has a clean pixel style: one mountain, one sun, three colours. Make it yours in You, then Appearance: pick a preset or set your own background, ink and accent colours, and choose a dither style and pixel size.'},
+ {g:'peak',t:'A whole new look',x:'Legacy now has a stippled, dithered art style with a slowly lit kettlebell behind everything. Make it yours in You, then Settings, then Appearance: pick a preset or set your own four colours, and choose a dither style and pixel size.'},
  {g:'clock',t:'Pixel countdown timers',x:'Rest, work and get-ready timers now have their own look: a moon that waxes, water that drains, numbers that dissolve. Pick one style or let Legacy choose for each phase.'},
  {g:'bolt',t:'Log sets in one tap',x:'Same as last set repeats your last set instantly. Copy last session fills in what you did last time. Tap an effort number from 6 to 10 and Legacy remembers how hard each set felt.'},
  {g:'plate',t:'Plates and warm-ups',x:'On barbell lifts, Plates shows exactly what goes on each side of the bar. Warm-up builds a ladder of lighter sets up to your working weight.'},
@@ -3004,10 +3023,10 @@ setInterval(()=>{if(!hcRefresh.done&&S.loaded&&S.profile&&window.LegacyNative&&w
 
 Object.assign(A,{
  lookSet(k,v){LOOK[k]=(k==='px')?+v:v;saveLook();applySky(true);render();dtPaintAll()},
- lookPreset(i){const p=PRESETS[+i];if(!p)return;LOOK.bg=p[1];LOOK.ink=p[2];LOOK.acc=p[3];saveLook();applySky(true);render();dtPaintAll()},
+ lookPreset(i){const p=PRESETS[+i];if(!p)return;LOOK.bg=p[1];LOOK.ink=p[2];LOOK.acc=p[3];LOOK.acc2=p[4];saveLook();applySky(true);render();dtPaintAll()},
  lookReset(){LOOK=Object.assign({},LOOK_DEF);saveLook();applySky(true);render()},
 });
-Object.assign(CH,{lookColor(v,a){if(!['bg','ink','acc'].includes(a)||!isHex(v))return;LOOK[a]=v.toLowerCase();saveLook();applySky(true);render();dtPaintAll()}});
+Object.assign(CH,{lookColor(v,a){if(!['bg','ink','acc','acc2'].includes(a)||!isHex(v))return;LOOK[a]=v.toLowerCase();saveLook();applySky(true);render();dtPaintAll()}});
 
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]');if(!el)return;

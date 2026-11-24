@@ -1,10 +1,9 @@
 {
-  "version": "2.0.6",
-  "color": "#de4f7f",
+  "version": "2.0.7",
+  "color": "#ff2e6e",
   "notes": [
-    "Numbers are easier to read: a 5 no longer looks like an S",
-    "New Settings button on the You tab with appearance, reminders, Health Connect, help and account",
-    "The mountain and sun now sit at the bottom of the screen, and headings stay readable over it",
-    "Countdown timers use only your three colours"
+    "New stippled art style: a slowly lit kettlebell in drifting stipple clouds replaces the mountain",
+    "Four colours you can change in Settings: background, highlight, main tone and rim light, with 8 presets",
+    "New Stipple dither style (the default)"
   ]
 }
