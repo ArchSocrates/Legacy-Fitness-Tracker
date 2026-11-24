@@ -1,9 +1,9 @@
 {
-  "version": "2.1.1",
+  "version": "2.2.0",
   "color": "#000000",
   "notes": [
-    "Fits more phones and tablets: small phones, phones in landscape, and large tablets in both orientations",
-    "Low-power phones automatically use Smooth glass (no live blur) so scrolling stays fluid; change it in Settings",
-    "The tab bar hides while the keyboard is open, and the system dark mode no longer changes the app's colours"
+    "New Calculators: body fat %, BMI and healthy range, ideal weight, calories per day, macros, protein, water, one-rep max, heart-rate zones, calories burned and waist-to-height",
+    "Calculators fill in your details automatically, can save body fat to your log and set your food target",
+    "Neck added to measurements for the body fat tape method"
   ]
 }

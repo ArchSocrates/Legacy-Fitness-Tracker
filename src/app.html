@@ -350,6 +350,16 @@ html.lite{--glass:var(--glass-solid)!important;--glass2:var(--glass2-solid)!impo
 @supports not ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){:root{--glass:var(--glass-solid)!important;--glass2:var(--glass2-solid)!important}}
 .cd{min-height:40px}
 h2,.vw>.mu,.vw>.hero,.vw>.quote,.leg{width:-webkit-fit-content;width:fit-content}
+
+/* calculators */
+.calc-h{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:none;border:0;color:var(--tx);padding:0;text-align:left}
+.calc .chev{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--fill);font-size:20px;flex:none}
+.calc-b{margin-top:6px;animation:vwin .35s var(--ease)}
+.cres{margin-top:16px;padding:16px;border-radius:14px;background:var(--fill)}
+.mbar,.bfbar{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--fill);position:relative}
+.mbar i{display:block;height:100%}
+.bfbar i{display:block;height:100%;background:var(--acc)}
+.bfbar b{position:absolute;top:-3px;width:4px;height:16px;border-radius:2px;background:var(--tx);box-shadow:0 0 0 2px var(--bg);transform:translateX(-50%)}
 </style>
 </head>
 <body>
@@ -1822,7 +1832,7 @@ function render(){
 function header(){const back=S.profile&&S.tab!=='home'?'<button class="bk" data-act="back" aria-label="Back">'+pix('back')+'</button>':'';return`<div class="top"><div class="l">${back}<div class="brand">${MARK}<b>LEGACY</b></div></div><div class="hr">${S.profile&&window.innerWidth>=840&&lsGet('legacy_two')==='off'?'<button class="tb" data-act="twoToggle">Two panes</button>':''}<div class="sync ${S.sync}" id="sync"><i></i><span>${S.sync==='saving'?'Saving…':S.sync==='error'?'Not saved':'Saved'}</span></div>${S.profile?'<button class="tb" data-act="tourMenu">Tour</button>':''}</div></div>`}
 function navHtml(){
   const t=[['home','Home','home'],['cal','Calendar','cal'],['lib','Exercises','lib'],['wk','Workout','wk'],['tm','Timer','tm'],['pr','Progress','pr'],['me','You','me']];
-  return`<nav class="nav"><div>${t.map(([k,l,i])=>`<button class="${S.tab===k||(k==='me'&&S.tab==='set')?'on':''}" data-act="tab" data-a="${k}">${ico(i)}<span>${l}${k==='wk'&&S.sess?' •':''}</span></button>`).join('')}</div></nav>`;
+  return`<nav class="nav"><div>${t.map(([k,l,i])=>`<button class="${S.tab===k||(k==='me'&&(S.tab==='set'||S.tab==='calc'))?'on':''}" data-act="tab" data-a="${k}">${ico(i)}<span>${l}${k==='wk'&&S.sess?' •':''}</span></button>`).join('')}</div></nav>`;
 }
 function timerBar(){
   if(!T||S.tab==='tm')return'';
@@ -2410,7 +2420,7 @@ function streakCard(){
 }
 
 /* ---------- body measurements ---------- */
-const MEAS=[['chest','Chest'],['waist','Waist'],['hips','Hips'],['arm','Upper arm'],['thigh','Thigh']];
+const MEAS=[['chest','Chest'],['waist','Waist'],['hips','Hips'],['neck','Neck'],['arm','Upper arm'],['thigh','Thigh']];
 function spark(pts){
   if(pts.length<2)return'';const w=160,h=34,xs=pts.map(p=>p.t),ys=pts.map(p=>p.v),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
   const X=t=>x1===x0?w/2:(t-x0)/(x1-x0)*(w-6)+3,Y=v=>y1===y0?h/2:h-4-(v-y0)/(y1-y0)*(h-8);
@@ -3152,6 +3162,188 @@ function hcCard(){
 Object.assign(A,{hcGo(){hcRefresh(true)}});
 V2.set=setView;
 setInterval(()=>{if(!hcRefresh.done&&S.loaded&&S.profile&&window.LegacyNative&&window.LegacyNative.hcRead){hcRefresh.done=1;hcRefresh(false)}},3000);
+
+/* ================= CALCULATORS (v2.2) =================
+   Body fat, lean mass, BMI and healthy range, ideal weight, BMR/TDEE, macros, protein, water,
+   one-rep max, heart-rate zones, calories burned, waist-to-height. Prefilled from the profile and
+   latest logs; results update live as you type. */
+const CALC=[
+ ['bf','Body fat %','US Navy tape method, or an estimate from BMI'],
+ ['bmi','BMI and healthy weight','Where you sit and the weight range for your height'],
+ ['ideal','Ideal body weight','Four classic formulas for your height'],
+ ['tdee','Calories per day','BMR and maintenance calories, plus lose/gain targets'],
+ ['macro','Macros','Protein, fat and carbs for your goal'],
+ ['prot','Protein','How much protein to eat each day'],
+ ['water','Water','Daily water with training'],
+ ['orm','One-rep max','Estimate your max from any set, with a % chart'],
+ ['hr','Heart-rate zones','Zones 1 to 5 for cardio'],
+ ['burn','Calories burned','For any activity and duration'],
+ ['whtr','Waist-to-height','A simple health-risk check']
+];
+S.calcOpen=S.calcOpen||'bf';
+const cU=()=>waistU(); // cm or in for tape lengths
+const cHeightCm=()=>(S.profile&&S.profile.heightCm)||null;
+function cLastMeas(k){const a=(S.meas||[]).filter(e=>e[k]!=null);return a.length?a[a.length-1][k]:null}
+function cLastBf(){const a=(S.weights||[]).filter(w=>w.bf);return a.length?a[a.length-1].bf:null}
+const cNum=id=>{const e=document.getElementById(id);if(!e)return NaN;const v=parseFloat(String(e.value).replace(',','.'));return isNaN(v)?NaN:v};
+const cLenCm=id=>{const v=cNum(id);return v>0?v*HF[cU()]:NaN};
+const cKg=id=>{const v=cNum(id);return v>0?v*WF[wu()]:NaN};
+const cSex=()=>{const e=document.getElementById('c_sex');return e?e.value:(S.profile&&S.profile.sex)||''};
+const cAge=()=>{const v=cNum('c_age');return v>0?v:+(S.profile&&S.profile.age)||NaN};
+const cW=(kg)=>`${wv(kg,wu())} ${wu()}`;
+const cRes=(big,sub,extra)=>`<div class="cres"><div class="big">${big}</div>${sub?`<div class="sm mu" style="margin-top:4px">${sub}</div>`:''}${extra||''}</div>`;
+const cNeed=t=>`<div class="mu sm" style="margin-top:10px">${t}</div>`;
+
+/* shared inputs: only the ones a calculator needs */
+function cIn(id,label,val,unit,ph){return`<label class="f" style="margin:0">${label}${unit?` (${unit})`:''}<input type="number" inputmode="decimal" id="${id}" data-in="calc" value="${val!=null&&!isNaN(val)?val:''}" placeholder="${ph||''}"></label>`}
+function cSexSel(){const s=(S.profile&&S.profile.sex)||'';return`<label class="f" style="margin:0">Sex<select id="c_sex" data-ch="calcSel"><option value="m"${s==='m'?' selected':''}>Male</option><option value="f"${s==='f'?' selected':''}>Female</option></select></label>`}
+function cBase(o){
+  const lw=latestW(),h=cHeightCm(),P=S.profile||{},u=cU();
+  const parts=[];
+  if(o.sex)parts.push(cSexSel());
+  if(o.age)parts.push(cIn('c_age','Age',P.age||'',''));
+  if(o.h)parts.push(cIn('c_h','Height',h?hv(h,u):'',u));
+  if(o.w)parts.push(cIn('c_w','Weight',lw?wv(lw.kg,wu()):'',wu()));
+  return`<div class="grid2" style="margin-top:10px">${parts.join('')}</div>`;
+}
+function calcForm(k){
+  const u=cU(),P=S.profile||{};
+  if(k==='bf')return cBase({sex:1,age:1,h:1,w:1})+`<div class="grid2" style="margin-top:10px">${cIn('c_neck','Neck',cLastMeas('neck')!=null?hv(cLastMeas('neck'),u):'',u)}${cIn('c_waist','Waist',cLastMeas('waist')!=null?hv(cLastMeas('waist'),u):'',u)}${cIn('c_hip','Hips',cLastMeas('hips')!=null?hv(cLastMeas('hips'),u):'',u,'women')}</div><p class="mu xs" style="margin:8px 0 0">Neck just below the Adam's apple, waist at the belly button, hips at the widest point. Measure relaxed with the tape flat, not pulled tight. Leave the tape fields empty for a BMI-based estimate.</p>`;
+  if(k==='bmi'||k==='ideal'||k==='whtr')return cBase({sex:k==='ideal',h:1,w:k==='bmi'})+(k==='whtr'?`<div class="grid2" style="margin-top:10px">${cIn('c_waist','Waist',cLastMeas('waist')!=null?hv(cLastMeas('waist'),u):'',u)}</div>`:'');
+  if(k==='tdee'||k==='macro')return cBase({sex:1,age:1,h:1,w:1})+`<div class="grid2" style="margin-top:10px"><label class="f" style="margin:0">Activity<select id="c_act" data-ch="calcSel">${[[1.2,'Mostly sitting'],[1.375,'Light (1–3 days/week)'],[1.55,'Moderate (3–5 days/week)'],[1.725,'Very active (6–7 days/week)'],[1.9,'Athlete / physical job']].map(([v,l])=>`<option value="${v}"${(+P.act||1.375)===v?' selected':''}>${l}</option>`).join('')}</select></label>${cIn('c_bf','Body fat % (optional)',cLastBf()||'','')}</div>`+(k==='macro'?`<div class="seg" style="margin-top:12px" id="c_goal">${[['lose','Lose fat'],['keep','Maintain'],['gain','Build muscle']].map(([v,l])=>`<button class="${(S.calcGoal||'keep')===v?'on':''}" data-act="calcGoal" data-a="${v}">${l}</button>`).join('')}</div>`:'');
+  if(k==='prot'||k==='water')return cBase({w:1})+`<div class="grid2" style="margin-top:10px">${k==='prot'?`<label class="f" style="margin:0">Goal<select id="c_pg" data-ch="calcSel"><option value="keep">Stay healthy</option><option value="lose">Lose fat, keep muscle</option><option value="gain" selected>Build muscle</option></select></label>`:cIn('c_min','Training today','45','min')}</div>`;
+  if(k==='orm')return`<div class="grid2" style="margin-top:10px">${cIn('c_lw','Weight lifted','',wu())}${cIn('c_reps','Reps done','5','')}</div>`;
+  if(k==='hr')return cBase({age:1})+`<div class="grid2" style="margin-top:10px">${cIn('c_rhr','Resting heart rate (optional)',hcRestHr()||'','bpm')}</div>`;
+  if(k==='burn')return cBase({w:1})+`<div class="grid2" style="margin-top:10px"><label class="f" style="margin:0">Activity<select id="c_actv" data-ch="calcSel">${ACTS.map(a=>`<option>${a[0]}</option>`).join('')}</select></label>${cIn('c_dur','Duration','30','min')}</div><div class="seg" style="margin-top:12px">${[['easy','Easy'],['mod','Moderate'],['hard','Hard']].map(([v,l])=>`<button class="${(S.calcInt||'mod')===v?'on':''}" data-act="calcInt" data-a="${v}">${l}</button>`).join('')}</div>`;
+  return'';
+}
+function hcRestHr(){try{const d=S.hc&&S.hc.days;if(!d)return null;const hr=Object.values(d).map(x=>x.hr).filter(Boolean);return hr.length?Math.round(Math.min(...hr)):null}catch(e){return null}}
+
+/* ---- the maths ---- */
+const BFCAT={m:[[6,'Essential fat'],[14,'Athletic'],[18,'Fit'],[25,'Average'],[99,'High']],f:[[14,'Essential fat'],[21,'Athletic'],[25,'Fit'],[32,'Average'],[99,'High']]};
+function bfNavy(sex,hCm,neck,waist,hip){
+  const I=v=>v/2.54,h=I(hCm);
+  if(sex==='f'){if(!(waist>0&&hip>0&&neck>0)||waist+hip-neck<=0)return NaN;return 163.205*Math.log10(I(waist)+I(hip)-I(neck))-97.684*Math.log10(h)-78.387}
+  if(!(waist>0&&neck>0)||waist-neck<=0)return NaN;return 86.010*Math.log10(I(waist)-I(neck))-70.041*Math.log10(h)+36.76;
+}
+const bfBmi=(sex,bmi,age)=>1.2*bmi+.23*age-10.8*(sex==='f'?0:1)-5.4; // Deurenberg
+const mifflin=(sex,kg,cm,age)=>10*kg+6.25*cm-5*age+(sex==='f'?-161:5);
+const katch=lbm=>370+21.6*lbm;
+function calcOut(k){
+  const sex=cSex()||'m',age=cAge(),h=cLenCm('c_h'),kg=cKg('c_w');
+  const need=[];
+  if(k==='bf'){
+    if(!(h>0))need.push('height');if(!(kg>0))need.push('weight');
+    if(need.length)return cNeed('Add your '+need.join(' and ')+'.');
+    const neck=cLenCm('c_neck'),waist=cLenCm('c_waist'),hip=cLenCm('c_hip');
+    let bf=bfNavy(sex,h,neck,waist,hip),how='US Navy tape method';
+    if(isNaN(bf)){if(!(age>0))return cNeed('Add your age, or fill in neck and waist'+(sex==='f'?' and hips':'')+' for the tape method.');bf=bfBmi(sex,kg/Math.pow(h/100,2),age);how='Estimate from BMI and age (less accurate than the tape)'}
+    bf=clamp(bf,2,60);const cat=BFCAT[sex==='f'?'f':'m'].find(c=>bf<=c[0])[1];
+    const fat=kg*bf/100,lean=kg-fat;
+    S.calcLast={bf:rnd(bf,1)};
+    return cRes(`${rnd(bf,1)}<span class="sm mu"> %</span>`,`${cat} · ${how}`,
+      `<div class="tiles" style="margin-top:12px"><div class="tile"><div class="lbl">Fat mass</div><div class="sm" style="font-weight:700;margin-top:4px">${cW(fat)}</div></div><div class="tile"><div class="lbl">Lean mass</div><div class="sm" style="font-weight:700;margin-top:4px">${cW(lean)}</div></div></div>
+      ${bfBar(bf,sex)}<button class="btn s" style="margin-top:12px" data-act="calcSaveBf">Save ${rnd(bf,1)}% to today's log</button>`);
+  }
+  if(k==='bmi'){
+    if(!(h>0&&kg>0))return cNeed('Add your height and weight.');
+    const m=h/100,bmi=kg/(m*m),cat=bmi<18.5?'Underweight':bmi<25?'Healthy':bmi<30?'Overweight':'Obese';
+    return cRes(`${rnd(bmi,1)}`,`${cat}`,`<p class="sm" style="margin:10px 0 0">Healthy range for your height: <b>${cW(18.5*m*m)} – ${cW(24.9*m*m)}</b></p><p class="mu xs" style="margin:6px 0 0">BMI does not see muscle. If you lift a lot, body fat % tells you more.</p>`);
+  }
+  if(k==='ideal'){
+    if(!(h>0))return cNeed('Add your height.');
+    const over=Math.max(0,h/2.54-60),f=sex==='f';
+    const r=[['Devine',(f?45.5:50)+2.3*over],['Robinson',(f?49:52)+(f?1.7:1.9)*over],['Miller',(f?53.1:56.2)+(f?1.36:1.41)*over],['Hamwi',(f?45.5:48)+(f?2.2:2.7)*over]];
+    const lo=Math.min(...r.map(x=>x[1])),hi=Math.max(...r.map(x=>x[1]));
+    return cRes(`${wv(lo,wu())}–${wv(hi,wu())}<span class="sm mu"> ${wu()}</span>`,'Range across four formulas',`<div style="margin-top:10px">${r.map(([n,v])=>`<div class="setrow"><span>${n}</span><b style="margin-left:auto">${cW(v)}</b></div>`).join('')}</div>`);
+  }
+  if(k==='tdee'||k==='macro'){
+    if(!(h>0&&kg>0&&age>0))return cNeed('Add your age, height and weight.');
+    const act=+(document.getElementById('c_act')||{}).value||1.375,bfv=cNum('c_bf');
+    const bmr=bfv>0?katch(kg*(1-bfv/100)):mifflin(sex,kg,h,age),tdee=bmr*act;
+    if(k==='tdee')return cRes(`${fmtN(Math.round(tdee))}<span class="sm mu"> kcal/day</span>`,`Maintenance · BMR ${fmtN(Math.round(bmr))} kcal (${bfv>0?'Katch-McArdle, uses body fat':'Mifflin-St Jeor'})`,
+      `<div style="margin-top:10px">${[['Lose fat (−20%)',tdee*.8],['Lose slowly (−10%)',tdee*.9],['Maintain',tdee],['Lean gain (+10%)',tdee*1.1]].map(([n,v])=>`<div class="setrow"><span>${n}</span><b style="margin-left:auto">${fmtN(Math.round(v/10)*10)} kcal</b></div>`).join('')}</div>`);
+    const g=S.calcGoal||'keep',kcal=Math.round((g==='lose'?tdee*.8:g==='gain'?tdee*1.1:tdee)/10)*10;
+    const lean=bfv>0?kg*(1-bfv/100):null,p=Math.round(lean?lean*(g==='lose'?2.4:2.2):kg*(g==='lose'?2:g==='gain'?1.8:1.6)),f=Math.round(kcal*.25/9),c=Math.max(0,Math.round((kcal-p*4-f*9)/4));
+    const tot=p*4+f*9+c*4||1;
+    return cRes(`${fmtN(kcal)}<span class="sm mu"> kcal/day</span>`,`${g==='lose'?'Lose fat':g==='gain'?'Build muscle':'Maintain'}`,
+      `<div class="mbar" style="margin-top:12px"><i style="width:${p*4/tot*100}%;background:var(--acc)"></i><i style="width:${f*9/tot*100}%;background:var(--acc2)"></i><i style="width:${c*4/tot*100}%;background:var(--mu)"></i></div>
+      <div style="margin-top:8px">${[['Protein',p,'var(--acc)'],['Fat',f,'var(--acc2)'],['Carbs',c,'var(--mu)']].map(([n,v,col])=>`<div class="setrow"><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${col};margin-right:8px"></i>${n}</span><b style="margin-left:auto">${v} g</b></div>`).join('')}</div>
+      ${typeof V2!=='undefined'&&V2.nut?`<button class="btn s" style="margin-top:12px" data-act="calcUseNut" data-a="${kcal}">Use ${fmtN(kcal)} kcal as my food target</button>`:''}`);
+  }
+  if(k==='prot'){
+    if(!(kg>0))return cNeed('Add your weight.');
+    const g=(document.getElementById('c_pg')||{}).value||'gain',[a,b]=g==='keep'?[1.0,1.2]:g==='lose'?[1.8,2.4]:[1.6,2.2];
+    return cRes(`${Math.round(kg*a)}–${Math.round(kg*b)}<span class="sm mu"> g/day</span>`,`${a}–${b} g per kg of body weight`,`<p class="mu xs" style="margin:8px 0 0">Spread it over 3–5 meals of about ${Math.round(kg*.4)} g each.</p>`);
+  }
+  if(k==='water'){
+    if(!(kg>0))return cNeed('Add your weight.');
+    const min=cNum('c_min')||0,ml=kg*35+min/30*350;
+    return cRes(`${rnd(ml/1000,1)}<span class="sm mu"> litres</span>`,`About ${Math.round(ml/250)} glasses of 250 ml`,`<p class="mu xs" style="margin:8px 0 0">Drink more in hot weather. Pale yellow pee means you are on track.</p>`);
+  }
+  if(k==='orm'){
+    const w=cKg('c_lw'),r=cNum('c_reps');
+    if(!(w>0&&r>0))return cNeed('Enter a weight and the reps you did with it.');
+    if(r>12)return cNeed('Use a set of 12 reps or fewer for a good estimate.');
+    const ep=w*(1+r/30),br=w*36/(37-r),m=r===1?w:(ep+br)/2;
+    const pct=[[100,1],[95,2],[90,4],[85,6],[80,8],[75,10],[70,12],[65,15],[60,20]];
+    return cRes(`${wv(m,wu())}<span class="sm mu"> ${wu()}</span>`,`Estimated one-rep max (Epley ${wv(ep,wu())} · Brzycki ${wv(br,wu())})`,
+      `<div style="margin-top:10px">${pct.map(([p,rr])=>`<div class="setrow"><span>${p}%</span><span class="mu sm" style="margin-left:10px">about ${rr} rep${rr>1?'s':''}</span><b style="margin-left:auto">${cW(m*p/100)}</b></div>`).join('')}</div>`);
+  }
+  if(k==='hr'){
+    if(!(age>0))return cNeed('Add your age.');
+    const max=Math.round(208-.7*age),rhr=cNum('c_rhr'),kv=rhr>30&&rhr<120;
+    const Z=[[1,'Recovery',.5,.6],[2,'Fat burn / base',.6,.7],[3,'Aerobic',.7,.8],[4,'Threshold',.8,.9],[5,'Max effort',.9,1]];
+    const bpm=p=>Math.round(kv?rhr+(max-rhr)*p:max*p);
+    return cRes(`${max}<span class="sm mu"> bpm max</span>`,kv?`Karvonen method with resting ${rhr} bpm`:'Add resting heart rate for more personal zones',
+      `<div style="margin-top:10px">${Z.map(([n,l,a,b])=>`<div class="setrow"><span><b style="margin-right:8px">Z${n}</b>${l}</span><b style="margin-left:auto">${bpm(a)}–${bpm(b)}</b></div>`).join('')}</div>`);
+  }
+  if(k==='burn'){
+    if(!(kg>0))return cNeed('Add your weight.');
+    const a=(document.getElementById('c_actv')||{}).value||'Walking',min=cNum('c_dur')||0,met=metOf(a)*(INT[S.calcInt||'mod']||1),kcal=Math.round(met*kg*min/60);
+    return cRes(`${fmtN(kcal)}<span class="sm mu"> kcal</span>`,`${a}, ${min} min · ${rnd(met,1)} MET`,`<button class="btn s" style="margin-top:12px" data-act="tab" data-a="act">Log an activity</button>`);
+  }
+  if(k==='whtr'){
+    const w=cLenCm('c_waist');if(!(h>0&&w>0))return cNeed('Add your height and waist.');
+    const r=w/h,cat=r<.4?'Low':r<.5?'Healthy':r<.6?'Raised risk':'High risk';
+    return cRes(`${rnd(r,2)}`,`${cat} · aim to keep your waist under half your height (${hv(h/2,cU())} ${cU()})`);
+  }
+  return'';
+}
+function bfBar(bf,sex){
+  const C=BFCAT[sex==='f'?'f':'m'],max=45;let x=0;
+  const seg=C.map(([to,l],i)=>{const a=x;x=Math.min(max,to);return`<i title="${l}" style="width:${(x-a)/max*100}%;opacity:${.25+i*.15}"></i>`}).join('');
+  return`<div class="bfbar" style="margin-top:12px">${seg}<b style="left:${Math.min(98,bf/max*100)}%"></b></div><div class="row sp xs mu" style="margin-top:4px"><span>Lean</span><span>High</span></div>`;
+}
+function calcCard(k,t,d){
+  const open=S.calcOpen===k;
+  return`<div class="card calc${open?' open':''}"><button class="calc-h" data-act="calcOpen" data-a="${k}"><div style="text-align:left"><div style="font-weight:700">${t}</div><div class="mu sm">${d}</div></div><span class="chev">${open?'−':'+'}</span></button>
+  ${open?`<div class="calc-b">${calcForm(k)}<div id="c_out">${calcOut(k)}</div></div>`:''}</div>`;
+}
+V2.calc=()=>`<h2>Calculators</h2>${CALC.map(c=>calcCard(...c)).join('')}<p class="mu xs" style="margin-top:6px">Estimates for guidance, not medical advice.</p>`;
+function calcRefresh(){const o=document.getElementById('c_out');if(o)o.innerHTML=calcOut(S.calcOpen)}
+Object.assign(I,{calc(){calcRefresh()}});
+Object.assign(CH,{calcSel(){calcRefresh()}});
+Object.assign(A,{
+  calcOpen(k){S.calcOpen=S.calcOpen===k?null:k;render()},
+  calcGoal(g){S.calcGoal=g;document.querySelectorAll('#c_goal button').forEach(b=>b.classList.toggle('on',b.dataset.a===g));calcRefresh()},
+  calcInt(g){S.calcInt=g;document.querySelectorAll('[data-act=calcInt]').forEach(b=>b.classList.toggle('on',b.dataset.a===g));calcRefresh()},
+  calcSaveBf(){
+    const bf=S.calcLast&&S.calcLast.bf,lw=latestW(),kg=cKg('c_w')||(lw&&lw.kg);if(!bf||!kg)return;
+    addWeight({d:today(),kg:rnd(kg,3),bf});toast('Saved '+bf+'% body fat');
+    // remember tape lengths as a measurement so they prefill next time
+    const m={d:today()},n=cLenCm('c_neck'),w=cLenCm('c_waist'),hp=cLenCm('c_hip');
+    if(n>0)m.neck=rnd(n,1);if(w>0)m.waist=rnd(w,1);if(hp>0)m.hips=rnd(hp,1);
+    if(Object.keys(m).length>1){const es=(S.meas||[]).slice(),i=es.findIndex(x=>x.d===m.d);if(i>=0)es[i]=Object.assign({},es[i],m);else es.push(m);es.sort((a,b)=>a.d.localeCompare(b.d));S.meas=es;saveMeas()}
+    render();
+  },
+  calcUseNut(k){if(!S.profile)return;setProf('nutKcal',+k);toast('Food target set to '+fmtN(+k)+' kcal');render()}
+});
+const CALC_CARD=()=>`<div class="card"><div class="row sp"><div><div style="font-weight:700">Calculators</div><div class="mu sm">Body fat, calories, macros, 1RM, heart-rate zones and more.</div></div><button class="btn s" data-act="tab" data-a="calc">Open</button></div></div>`;
+
+/* entry points: You and Progress > Body */
+{const _m=meView;meView=function(){const h=_m();const i=h.indexOf('<div class="card" style="padding:12px 14px">');return h+CALC_CARD()}}
+{const _b=bodyView;bodyView=function(){return CALC_CARD()+_b()}}
 
 Object.assign(A,{
  lookSet(k,v){LOOK[k]=(k==='px')?+v:v;saveLook();applySky(true);render();dtPaintAll()},
