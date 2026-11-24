@@ -393,6 +393,16 @@ h2,.vw>.mu,.vw>.hero,.vw>.quote,.leg{width:-webkit-fit-content;width:fit-content
 .rbar,.rbar i,.bmi-bar{border-radius:99px!important}.rbar{background:var(--fill)!important;background-image:none!important}.rbar i{background:var(--acc)!important}
 .stepper button{border-radius:50%!important;box-shadow:none!important;border:1px solid var(--gline)!important;background:var(--glass2)!important}
 .gd .x,.gd .yt{border-radius:99px!important}
+
+/* I'm in the gym switch */
+.gymsw{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--gline);background:var(--fill);color:var(--tx);text-align:left;transition:background-color .25s,transform .3s var(--ease)}
+.gymsw b{font-size:16px;font-weight:700}.gymsw:active{transform:scale(.98)}
+.gymsw .gs-i{width:36px;height:36px;border-radius:10px;background:var(--glass2);display:flex;align-items:center;justify-content:center;flex:none}
+.gymsw.on{background:var(--acc-14);border-color:var(--acc)}
+.gymsw.on .gs-i{background:var(--acc);color:var(--acc-t)}
+.tg{width:50px;height:30px;border-radius:99px;background:var(--fill);position:relative;flex:none;transition:background-color .25s;border:1px solid var(--gline)}
+.tg i{position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .3s var(--ease)}
+.tg.on{background:var(--acc)}.tg.on i{transform:translateX(20px)}
 </style>
 </head>
 <body>
@@ -578,7 +588,59 @@ Band Face Pull|SH|bd|r|Anchor at face height, pull to your forehead with elbows 
 Band Bicep Curl|BI|bd|r|Stand on the band, elbows pinned to your sides, curl and squeeze.|oXAMW-LNX_Q
 Band Triceps Pushdown|TR|bd|r|Anchor the band overhead, elbows pinned, push down to lockout.|rdEIMo7EKyA
 Band Overhead Press|SH|bd|r|Stand on the band and press straight overhead with ribs down.|kTKs3C3ktlw
-Band Pallof Press|CO|bd|r|Anchor at chest height, press out and resist the rotation.|iBDXkpKDRy8`;
+Band Pallof Press|CO|bd|r|Anchor at chest height, press out and resist the rotation.|iBDXkpKDRy8
+Incline Chest Press Machine|CH|mc|r|Seat set so the handles line up with your upper chest. Press up and out, lower slowly until you feel a stretch.|
+Decline Barbell Bench Press|CH|bb+bn|r|Feet locked in, lower the bar to your lower chest, press up over your chest. Use a spotter or safety arms.|
+Low-to-High Cable Fly|CH|cb|r|Handles low, arms slightly bent. Sweep up and together to chin height, squeezing your upper chest.|
+Smith Machine Incline Press|CH|mc+bn|r|Bench at 30 degrees under the bar. Lower to your upper chest with elbows about 45 degrees from your body.|
+Parallel Bar Dip|CH|mc|r|Lean forward a little, lower until your shoulders are just below your elbows, press back up. Use the assisted machine if needed.|
+T-Bar Row|BK|bb|r|Hinge to about 45 degrees with a flat back. Pull the bar to your belly, squeeze your shoulder blades, lower under control.|
+Chest-Supported Row Machine|BK|mc|r|Chest on the pad, pull the handles back by driving your elbows behind you. No jerking.|
+Single-Arm Cable Row|BK|cb|r|Stagger your stance, pull the handle to your hip, let the shoulder reach forward on the way back.|
+Close-Grip Lat Pulldown|BK|cb|r|V-handle, lean back slightly, pull to your upper chest keeping your elbows close to your sides.|
+Reverse-Grip Lat Pulldown|BK|cb|r|Palms facing you, shoulder-width. Pull to your upper chest, then let your arms straighten fully at the top.|
+Rack Pull|GH|bb|r|Bar on safety pins just below the knee. Flat back, push the floor away and lock out with your glutes.|
+Meadows Row|BK|bb|r|Stand side-on to a landmine bar, grab the end and row it up toward your hip with a flat back.|
+Smith Machine Overhead Press|SH|mc|r|Sit or stand under the bar, press from chin height to overhead without arching your lower back.|
+Landmine Press|SH|bb|r|Hold the bar end at your shoulder and press up and forward. Shoulder friendly and great for beginners.|
+Cable Rear Delt Fly|SH|cb|r|Cross the cables at face height, pull out wide with soft elbows, squeeze the backs of your shoulders.|
+Barbell Upright Row|SH|bb|r|Shoulder-width grip, lift the bar to lower chest with elbows leading. Stop if you feel shoulder pinching.|
+Cable Front Raise|SH|cb|r|Low cable behind you, raise the handle to eye level with a slight elbow bend, lower slowly.|
+Push Press|SH|bb|r|Small dip at the knees, then drive with your legs to help press the bar overhead. Lower to your shoulders with control.|
+EZ-Bar Curl|BI|bb|r|Grip the angled parts of the bar, elbows pinned to your sides, curl up and lower slowly.|
+Preacher Curl Machine|BI|mc|r|Armpits snug on the pad. Curl up, then lower all the way until your arms are almost straight.|
+Barbell Preacher Curl|BI|bb+bn|r|Upper arms flat on the preacher pad or incline bench. Slow lowering, no bouncing at the bottom.|
+Cable Rope Hammer Curl|BI|cb|r|Rope on a low cable, thumbs up, curl toward your shoulders without swinging.|
+Bayesian Cable Curl|BI|cb|r|Face away from a low cable, arm slightly behind you. Curl forward keeping your elbow back.|
+Reverse-Grip Barbell Curl|BI|bb|r|Palms down, curl the bar up. Works your forearms and the outer biceps. Use a lighter weight.|
+Rope Triceps Pushdown|TR|cb|r|Elbows at your sides, push the rope down and spread the ends apart at the bottom.|
+Single-Arm Cable Pushdown|TR|cb|r|One handle, elbow tucked, push down to a straight arm and pause.|
+Triceps Dip Machine|TR|mc|r|Sit tall, push the handles down until your arms are straight, return slowly.|
+Barbell Overhead Triceps Extension|TR|bb|r|EZ or straight bar overhead, lower it behind your head by bending only at the elbows.|
+Trap Bar Deadlift|GH|bb|r|Stand inside the hex bar, hips back, chest up, push the floor away. Easier on the back than a straight bar.|
+Smith Machine Lunge|QD|mc|r|Bar on your upper back, long stance. Lower your back knee straight down and drive up through the front heel.|
+Pendulum Squat|QD|mc|r|Back on the pad, feet mid-platform. Sit deep with control, drive up without locking your knees hard.|
+Belt Squat|QD|mc|r|Belt around your hips, stand tall and squat down. Loads the legs without loading the spine.|
+Leg Press Calf Raise|CF|mc|r|Balls of your feet on the bottom edge of the platform. Press up through your toes, stretch at the bottom.|
+Smith Machine Calf Raise|CF|mc|r|Toes on a plate, bar on your back. Rise all the way up, pause, lower into a deep stretch.|
+Hip Adduction Machine|QD|mc|r|Sit tall, squeeze your knees together against the pads, return slowly.|
+Glute Kickback Machine|GH|mc|r|Chest on the pad, push the platform back with your heel, squeeze your glute at the top.|
+Hip Thrust Machine|GH|mc|r|Belt across your hips, drive up until your body is flat, pause and squeeze.|
+Nordic Hamstring Curl|GH|bw+bn|r|Anchor your heels under a bench or pad. Lower your body forward as slowly as you can, push back up with your hands.|
+Barbell Step-Up|QD|bb+bn|r|Bar on your back, step onto a box or bench and stand tall. Drive through the top foot only.|
+Box Squat|QD|bb+bn|r|Sit back to a box or bench, pause briefly, then stand up powerfully. Teaches depth and hip drive.|
+Reverse Hyperextension|GH|mc|r|Hips on the pad, legs hanging. Lift your legs up with your glutes, not your lower back.|
+Standing Cable Hip Abduction|GH|cb|r|Ankle strap on a low cable, stand side-on and swing the outside leg away from your body.|
+Captain's Chair Leg Raise|CO|mc|r|Back against the pad, forearms on the rests. Raise your knees or straight legs without swinging.|
+Decline Sit-Up|CO|bn|r|Feet hooked on a decline bench, curl up one vertebra at a time, lower slowly.|
+Landmine Rotation|CO|bb|r|Hold the bar end at arm's length and rotate it side to side in an arc, turning from your hips.|
+Hanging Windshield Wiper|CO|pu|r|Hang with legs raised, rotate them side to side under control. Advanced.|
+Air Bike Sprint|CA|mc|t|Push and pull the arms while you pedal hard. Short all-out efforts with easy recovery between.|
+Ski Erg|CA|mc|t|Pull the handles down by hinging at the hips and driving with your arms, like double-pole skiing.|
+Sled Push|FB|mc|t|Arms straight, lean in, drive with short powerful steps. Keep your back flat.|
+Battle Ropes|CA|mc|t|Soft knees, make fast waves with both arms. Breathe and keep the waves going to the anchor.|
+Power Clean|FB|bb|r|Pull the bar from the floor, extend hard through the hips and catch it on your shoulders. Learn with a coach first.|
+Barbell Thruster|FB|bb|r|Front squat down, then drive up and press the bar overhead in one smooth movement.|`;
 const EX=RAW.trim().split('\n').map(l=>{const [name,m,eq,k,tip,vid]=l.split('|');return{id:slug(name),name,m,eq:eq.split('+'),k,tip,vid}});
 const BYID={};EX.forEach(e=>BYID[e.id]=e);
 const TPL=[
@@ -591,6 +653,15 @@ const TPL=[
  {n:'Gym: Push Day',d:'Chest, shoulders, triceps',l:['Barbell Bench Press','Barbell Overhead Press','Pec Deck Fly','Dumbbell Lateral Raise','Triceps Pushdown']},
  {n:'Gym: Pull Day',d:'Back and biceps',l:['Lat Pulldown','Seated Cable Row','Face Pull','Reverse Pec Deck','Cable Bicep Curl']},
  {n:'Gym: Leg Day',d:'Quads, hams, calves',l:['Barbell Back Squat','Leg Press','Barbell Romanian Deadlift','Leg Extension','Lying Leg Curl','Standing Calf Raise Machine']},
+ {n:'Gym: Full Body',d:'One session, every major muscle',l:['Barbell Back Squat','Barbell Bench Press','Lat Pulldown','Barbell Romanian Deadlift','Shoulder Press Machine','Seated Cable Row','Cable Crunch']},
+ {n:'Gym: Upper Body',d:'Chest, back, shoulders, arms',l:['Incline Chest Press Machine','Chest-Supported Row Machine','Smith Machine Overhead Press','Close-Grip Lat Pulldown','EZ-Bar Curl','Rope Triceps Pushdown']},
+ {n:'Gym: Lower Body',d:'Quads, glutes, hams, calves',l:['Hack Squat','Trap Bar Deadlift','Bulgarian Split Squat','Seated Leg Curl','Hip Thrust Machine','Leg Press Calf Raise']},
+ {n:'Gym: Machine Circuit',d:'Beginner friendly, all machines',l:['Leg Press','Chest Press Machine','Seated Row Machine','Shoulder Press Machine','Leg Extension','Seated Leg Curl','Ab Crunch Machine']},
+ {n:'Gym: Cable Sculpt',d:'Constant tension, every angle',l:['Cable Fly','Single-Arm Cable Row','Cable Lateral Raise','Cable Rear Delt Fly','Bayesian Cable Curl','Overhead Cable Triceps Extension','Cable Woodchop']},
+ {n:'Gym: Arms',d:'Biceps and triceps',l:['EZ-Bar Curl','Close-Grip Bench Press','Preacher Curl Machine','Rope Triceps Pushdown','Cable Rope Hammer Curl','Triceps Dip Machine']},
+ {n:'Gym: Strength 5×5',d:'Heavy barbell basics',l:['Barbell Back Squat','Barbell Bench Press','Barbell Bent-Over Row','Barbell Overhead Press','Conventional Deadlift']},
+ {n:'Gym: Glutes & Hamstrings',d:'Posterior chain',l:['Barbell Hip Thrust','Barbell Romanian Deadlift','Lying Leg Curl','Glute Kickback Machine','Hip Abduction Machine','Back Extension']},
+ {n:'Gym: Cardio Mix',d:'Machines back to back',l:['Rowing Machine','Air Bike Sprint','Incline Treadmill Walk','Ski Erg','Stair Climber']},
  {n:'Recovery: Easy Bodyweight',d:'Gentle restart, no equipment',rec:1,l:['Knee Push-Up','Glute Bridge','Bird Dog','Dead Bug','Bodyweight Squat','Calf Raise']},
  {n:'Recovery: Light Dumbbells',d:'Light weights, easy effort',rec:1,l:['Dumbbell Goblet Squat','Dumbbell Floor Press','Bent-Over Dumbbell Row','Dumbbell Lateral Raise','Dumbbell Bicep Curl']},
  {n:'Recovery: Light Kettlebell',d:'Easy kettlebell restart',rec:1,l:['Kettlebell Goblet Squat','Kettlebell Row','Kettlebell Overhead Press']}
@@ -607,7 +678,7 @@ function adjList(a){const o=[];if(!adjOk(a))return o;for(let v=a.min;v<=a.max+1e
 const DEF={kg:{db:[4,8,12,16,20],kb:[8,12,16]},lb:{db:[10,15,20,30,40],kb:[18,35,44]}};
 const QUOTES=['Every rep is a sword stroke. Make it clean.','Nobody is watching. That is exactly when legends are made.','One more set. Then one more after that.','Pain is the price of the person you are becoming.','Rest is part of the fight. Breathe, then strike.','Your only rival is who you were last week.','Weak yesterday. Stronger today. Unstoppable soon.','The iron does not care about your excuses.','Discipline is a quiet roar.','Sweat now. Stand tall later.','A hundred small reps carve a mountain.','Show up, even on the days you do not want to.','Strength is a promise you keep to yourself.','Fall seven times. Lift on the eighth.'];
 const bubble=slot=>{const d=Math.floor((Date.now()+288e5)/864e5);return`<div class="quote">${QUOTES[(d*3+slot*5)%QUOTES.length]}</div>`};
-const yt=e=>'https://www.youtube.com/watch?v='+e.vid;
+const yt=e=>e.vid?'https://www.youtube.com/watch?v='+e.vid:'https://www.youtube.com/results?search_query='+encodeURIComponent(e.name+' proper form');
 
 /* ================= HELPERS ================= */
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1140,7 +1211,7 @@ function enter(u,key){
       new Set([...Object.keys(logs),...Object.keys(S.logs)]).forEach(m=>{const w=W['log_'+m];if(w&&w.busy){nl[m]=S.logs[m]}else if(logs[m])nl[m]=logs[m]});
       S.logs=nl;
       const first=!S.loaded;S.loaded=true;S.slow=false;if(first&&src!=='cache')S.fromDevice=false;if(src==='cache')S.fromDevice=true;
-      if(first){S.todayEq=S.profile&&S.profile.equip?S.profile.equip.slice():['bw']}
+      if(first){S.todayEq=S.profile&&S.profile.equip?S.profile.equip.slice():['bw'];if(lsGet('legacy_gym_day')===today())S.todayEq=Object.keys(EQ)}
       if(S.profile&&S.profile.look){LOOK=normLook(S.profile.look);try{localStorage.setItem('legacy_look',JSON.stringify(LOOK))}catch(e){}applySky(true)}
       LD.src=src;
       try{if(!document.activeElement||!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)||first)render()}catch(e){console.error(e)}
@@ -1374,7 +1445,7 @@ const TSTEPS=[
  {tab:'home',g:'care',sel:'[data-act=ckOpen]',up:'.card',t:'Body check-in',x:'The day after a workout, log anything sore, cramping or painful. Legacy lightens those muscles in your next workouts.'},
  {tab:'home',g:'care',sel:'[data-act=recOpen]',up:'.card',t:'Been sick?',x:'Pick the sick days on a calendar and your workouts ease back in gradually, with lighter weights and longer rests.'},
  {tab:'cal',g:'cal',sel:NAVB(2),t:'Calendar',x:'Tap any date to see everything you did that day. Plan workouts, log weight, mark sick days and add notes.'},
- {tab:'lib',g:'lib',sel:NAVB(3),t:'Exercises',x:'Over 170 exercises, each with a form video. Filter by muscle and by the equipment you are using today.'},
+ {tab:'lib',g:'lib',sel:NAVB(3),t:'Exercises',x:'Over 220 exercises, each with a form video. Filter by muscle and by the equipment you are using today.'},
  {tab:'wk',g:'wk',sel:NAVB(4),t:'Workout',x:'Follow your training split, or start any routine. Inside a workout, tap Guided workout and a timer runs every set and rest for you.'},
  {tab:'wk',g:'wk',sel:'[data-act=mkOpen]',up:'.card',t:'Make a workout for me',x:'Pick a focus, time, goal and how you feel. Legacy builds a workout from your equipment and avoids sore areas.'},
  {tab:'wk',g:'wk',t:'Guided workout',x:'Start any workout, then tap Guided workout. A full-screen timer counts you in, runs every set and rest, logs your sets for you and can speak to you. Pause, skip or go back any time.'},
@@ -1490,9 +1561,11 @@ const SPLITS={
   {n:'Arms',g:[['BI',2],['TR',2]]},{n:'Legs',g:[['QD',2],['GH',2],['CF',1],['CO',1]]}]}
 };
 const COMP=/squat|press|row|pull-up|pulldown|deadlift|lunge|thrust|bridge|push-up|dip|clean|step-up|chin/i,WGT=['db','kb','bb','cb','mc','bd'];
+const GYMEQ=['bb','mc','cb'];
+const gymOn=eq=>Object.keys(EQ).every(k=>(eq||S.todayEq).includes(k));
 function exPool(code,eq,lvl){
   const c=EX.filter(e=>e.m===code&&e.eq.every(x=>x==='bw'||eq.includes(x))&&exLvl(e)<=lvl);
-  const sc=e=>(COMP.test(e.name)?0:2)+(e.eq.some(x=>WGT.includes(x))?0:1);
+  const gym=gymOn(eq),sc=e=>(COMP.test(e.name)?0:2)+(e.eq.some(x=>WGT.includes(x))?0:1)+(gym&&!e.eq.some(x=>GYMEQ.includes(x))?1.5:0);
   return c.sort((a,b)=>sc(a)-sc(b));
 }
 function pickEx(code,n,eq,lvl,seed){
@@ -1929,6 +2002,7 @@ function formHtml(first){
   <label class="f">Dumbbell / barbell weights are in<div class="uf">${selHtml('f_lu',[['kg','kg'],['lb','lb']],lu,'lu')}</div></label>
   <label class="f">Timer sound</label><div class="seg" style="margin-top:6px"><button class="${P.sound!==false?'on':''}" data-act="sound" data-a="1">On</button><button class="${P.sound===false?'on':''}" data-act="sound" data-a="0">Off</button></div></div>
   <div class="card"><h3>What equipment do you have?</h3><p class="mu sm" style="margin-top:-4px">Legacy only suggests exercises you can do. You can change this any time and pick different gear for each workout.</p>
+  <button class="chip${Object.keys(EQ).every(k=>P.equip.includes(k))?' on':''}" data-act="pGym" style="margin-bottom:8px">I train at a gym (select all)</button>
   <div class="chips">${Object.keys(EQ).map(k=>`<button class="chip${P.equip.includes(k)?' on':''}" data-act="pEq" data-a="${k}" ${k==='bw'?'disabled':''}>${EQ[k]}</button>`).join('')}</div>
   ${['db','kb','bb'].map(m=>P.equip.includes(m)?adjBlock(m,P,lu,wsel):'').join('')}
   </div>`;
@@ -2008,7 +2082,8 @@ function sessCard(s){
 }
 
 /* ---------- library ---------- */
-function eqPicker(){return`<div class="chips">${Object.keys(EQ).map(k=>`<button class="chip${S.todayEq.includes(k)?' on':''}" data-act="teq" data-a="${k}">${EQ[k]}</button>`).join('')}</div>`}
+function gymSwitch(){const on=gymOn();return`<button class="gymsw${on?' on':''}" data-act="gymToggle" aria-pressed="${on}"><span class="gs-i">${pix('lib')}</span><span class="grow" style="text-align:left"><b>I'm in the gym</b><span class="mu xs" style="display:block">${on?'All gym equipment is on for today':'Turn on every machine, cable, barbell and more'}</span></span><span class="tg${on?' on':''}"><i></i></span></button>`}
+function eqPicker(){return gymSwitch()+`<div class="chips" style="margin-top:10px">${Object.keys(EQ).map(k=>`<button class="chip${S.todayEq.includes(k)?' on':''}" data-act="teq" data-a="${k}">${EQ[k]}</button>`).join('')}</div>`}
 function filtered(){
   const F=S.filter,q=F.q.trim().toLowerCase();
   return EX.filter(e=>(F.m==='All'||e.m===F.m)&&(F.all||e.eq.every(x=>x==='bw'||S.todayEq.includes(x)))&&(!q||e.name.toLowerCase().includes(q)||MU[e.m].toLowerCase().includes(q)||e.eq.some(x=>EQ[x].toLowerCase().includes(q))));
@@ -2265,6 +2340,7 @@ const A={
  more(){S.filter.lim+=60;$('#exlist').innerHTML=listHtml()},
  muscle(a){S.filter.m=a;S.filter.lim=60;render()},
  showall(a){S.filter.all=a==='1';S.filter.lim=60;render()},
+ gymToggle(){if(gymOn()){S.todayEq=(S.profile.equip||['bw']).slice();lsSet('legacy_gym_day','')}else{S.todayEq=Object.keys(EQ);lsSet('legacy_gym_day',today())}S.filter.lim=60;toast(gymOn()?'Gym mode on for today':'Back to your usual equipment');render()},
  teq(a){if(a==='bw')return;const i=S.todayEq.indexOf(a);if(i<0)S.todayEq.push(a);else S.todayEq.splice(i,1);S.filter.lim=60;render()},
  add(a){startSession([a]);const R=recInfo();toast(R&&R.ph<4&&exLvl(BYID[a])>R.lvl?'Added. Tough for your recovery phase, go light':'Added to your workout');render()},
  startEmpty(){startSession([]);render()},
@@ -2325,6 +2401,7 @@ const A={
  tstop(){T=null;render()},
  /* profile form */
  sound(a){syncForm();S.P.sound=a==='1';render()},
+ pGym(){syncForm();const P=S.P,all=Object.keys(EQ).every(k=>P.equip.includes(k));P.equip=all?['bw']:Object.keys(EQ);render()},
  pEq(a){syncForm();const P=S.P,i=P.equip.indexOf(a);if(i<0)P.equip.push(a);else P.equip.splice(i,1);render()},
  wtog(a,b){syncForm();const k=a==='db'?'dbW':'kbW',l=S.P[k],w=+b,i=l.indexOf(w);if(i<0)l.push(w);else l.splice(i,1);l.sort((x,y)=>x-y);render()},
  wadd(a){syncForm();const v=parseFloat($('#f_a'+a).value);if(!v||v<=0)return;const k=a==='db'?'dbW':'kbW';if(!S.P[k].includes(v))S.P[k].push(v);S.P[k].sort((x,y)=>x-y);render()},

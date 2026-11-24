@@ -1,8 +1,9 @@
 {
-  "version": "2.3.1",
+  "version": "2.4.0",
   "color": "#000000",
   "notes": [
-    "Fixed: the guided workout screen was see-through, with the page, header and tab bar showing on top of it",
-    "Guided workout controls are now round, with a clean progress bar and a clearer get-ready countdown"
+    "New I'm in the gym switch: turns on every machine, cable, barbell and more for the day, and workouts lean toward gym exercises",
+    "52 new gym exercises (224 in total), with more for biceps, triceps, calves, glutes, shoulders and gym cardio",
+    "9 new gym workouts: Full Body, Upper, Lower, Machine Circuit, Cable Sculpt, Arms, Strength 5x5, Glutes and Hamstrings, Cardio Mix"
   ]
 }
