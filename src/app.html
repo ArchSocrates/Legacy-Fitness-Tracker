@@ -2818,9 +2818,9 @@ function homeHub(){
 }
 const _hv=homeView;
 homeView=function(){
-  const h=_hv(),i=h.indexOf('class="hero"');if(i<0)return h;
+  const h=_hv();let hub='';try{hub=homeHub()}catch(e){console.error(e)}const i=h.indexOf('class="hero"');if(i<0)return h;
   const j=h.indexOf('</div>',i)+6,k=h.indexOf('<div class="card',j);
-  const at=k<0?j:k;return h.slice(0,at)+homeHub()+h.slice(at);
+  const at=k<0?j:k;return h.slice(0,at)+hub+h.slice(at);
 };
 const _tv=trainView;
 trainView=function(){const h=_tv();return h+muscleMap()+`<button class="btn blk" style="margin:4px 0 14px" data-act="recap">Share my week</button>`};
@@ -2957,6 +2957,16 @@ document.addEventListener('change',e=>{const el=e.target.closest('[data-ch]');if
 document.addEventListener('input',e=>{const el=e.target.closest('[data-in]');if(el&&I[el.dataset.in])I[el.dataset.in](el.value,el.dataset.a,el)});
 window.addEventListener('beforeunload',()=>{try{unsub&&unsub()}catch(e){}});
 
+const T_BOOT=Date.now();
+function showErr(m){
+  if(S.errShown||/ResizeObserver|Script error/.test(m))return;
+  if(S.loaded&&Date.now()-T_BOOT>20000)return;
+  S.errShown=1;const b=document.createElement('div');b.id='errbar';
+  b.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:999;background:#b3261e;color:#fff;padding:10px;font:12px/1.4 monospace;white-space:pre-wrap;max-height:45vh;overflow:auto';
+  b.textContent='Legacy hit a problem. Please screenshot this and send it:\n'+String(m).slice(0,700);b.onclick=()=>b.remove();document.body.appendChild(b);
+}
+window.addEventListener('error',e=>showErr((e.message||'error')+' @'+(e.lineno||'')+':'+(e.colno||'')));
+window.addEventListener('unhandledrejection',e=>{const r=e.reason;showErr(String(r&&(r.stack||r.message)||r))});
 buildSky();applySky();setInterval(applySky,30000);
 init();
 })();
