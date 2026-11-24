@@ -6,9 +6,12 @@ import {
   signOut as fbSignOut, deleteUser as fbDeleteUser
 } from 'firebase/auth';
 import {
-  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  doc, collection, getDoc, getDocs, setDoc, deleteDoc, query, where, onSnapshot
+  initializeFirestore, persistentLocalCache, persistentSingleTabManager, memoryLocalCache,
+  doc, collection, getDoc, getDocs, getDocsFromCache, setDoc, deleteDoc, query, where, onSnapshot
 } from 'firebase/firestore';
+// Second, independent route to the same database: plain HTTPS requests, no realtime channel and no
+// on-device cache. Used when the realtime connection does not answer.
+import * as L from 'firebase/firestore/lite';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { Share } from '@capacitor/share';
@@ -19,7 +22,21 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import cfg from './firebase-config.js';
 
 const app = initializeApp(cfg);
-const fs = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+let NOCACHE = false;
+try { NOCACHE = localStorage.getItem('legacy_nocache') === '1'; } catch (e) {}
+let fs;
+try {
+  fs = initializeFirestore(app, {
+    localCache: NOCACHE ? memoryLocalCache() : persistentLocalCache({ tabManager: persistentSingleTabManager(undefined) }),
+    experimentalAutoDetectLongPolling: true
+  });
+} catch (e) {
+  console.error('firestore init', e); NOCACHE = true;
+  fs = initializeFirestore(app, { localCache: memoryLocalCache(), experimentalAutoDetectLongPolling: true });
+}
+const lfs = L.getFirestore(app);
+let MODE = 'full'; // 'lite' once the realtime route has proven stuck on this launch
+const timeout = (p, ms, tag) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error(tag + ' timed out'), { code: 'timeout' })), ms))]);
 const auth = getAuth(app);
 
 // usernames become hidden emails, so nobody has to use a real one
@@ -28,23 +45,57 @@ const emailOf = u => hex(u) + '@legacy.invalid';
 const uid = () => (auth.currentUser ? auth.currentUser.uid : null);
 
 const wrapDoc = d => ({ id: d.id, exists: d.exists(), data: () => d.data() });
+const missing = path => ({ id: path, exists: false, data: () => undefined });
 const docRef = path => ({
   async get() {
-    try { return wrapDoc(await getDoc(doc(fs, path))) }
-    catch (e) { if (e && e.code === 'permission-denied') return { id: path, exists: false, data: () => undefined }; throw e }
+    const viaLite = async () => { try { return wrapDoc(await L.getDoc(L.doc(lfs, path))) } catch (e) { if (e && e.code === 'permission-denied') return missing(path); throw e } };
+    if (MODE === 'lite') return viaLite();
+    try { return wrapDoc(await timeout(getDoc(doc(fs, path)), 9000, 'read')) }
+    catch (e) {
+      if (e && e.code === 'permission-denied') return missing(path);
+      if (e && (e.code === 'timeout' || e.code === 'unavailable')) return viaLite();
+      throw e;
+    }
   },
-  async set(v) { await setDoc(doc(fs, path), Object.assign({}, v, { o: uid() })) },
-  async delete() { await deleteDoc(doc(fs, path)) }
+  async set(v) {
+    const data = Object.assign({}, v, { o: uid() });
+    if (MODE === 'lite') return L.setDoc(L.doc(lfs, path), data);
+    // the realtime route keeps the write queued; if it has not been confirmed in 10s, send it directly too
+    try { await timeout(setDoc(doc(fs, path), data), 10000, 'save') }
+    catch (e) { if (e && e.code === 'timeout') await L.setDoc(L.doc(lfs, path), data); else throw e }
+  },
+  async delete() {
+    if (MODE === 'lite') return L.deleteDoc(L.doc(lfs, path));
+    try { await timeout(deleteDoc(doc(fs, path)), 10000, 'delete') }
+    catch (e) { if (e && e.code === 'timeout') await L.deleteDoc(L.doc(lfs, path)); else throw e }
+  }
 });
-const colRef = (path, q) => ({
-  doc: id => docRef(path + '/' + id),
-  async get() { const s = await getDocs(q || collection(fs, path)); return { docs: s.docs.map(wrapDoc) } },
-  where(f, op, v) { return colRef(path, query(collection(fs, path), where(f, op, v), where('o', '==', uid()))) },
-  onSnapshot(cb, err) { return onSnapshot(q || collection(fs, path), s => cb({ docs: s.docs.map(wrapDoc) }), err) }
-});
+const colRef = (path, filt) => {
+  const fq = () => filt ? query(collection(fs, path), ...filt.map(a => where(...a))) : collection(fs, path);
+  const lq = () => filt ? L.query(L.collection(lfs, path), ...filt.map(a => L.where(...a))) : L.collection(lfs, path);
+  return {
+    doc: id => docRef(path + '/' + id),
+    async get() { const s = await getDocs(fq()); return { docs: s.docs.map(wrapDoc) } },
+    // direct HTTPS read, skips the realtime channel and the device cache
+    async getDirect() { const s = await L.getDocs(lq()); return { docs: s.docs.map(wrapDoc), source: 'server-direct' } },
+    async getCached() { const s = await getDocsFromCache(fq()); return { docs: s.docs.map(wrapDoc), source: 'cache', fromCache: true } },
+    where(f, op, v) { return colRef(path, [[f, op, v], ['o', '==', uid()]]) },
+    onSnapshot(cb, err) { return onSnapshot(fq(), s => cb({ docs: s.docs.map(wrapDoc), fromCache: s.metadata.fromCache, source: s.metadata.fromCache ? 'live-cache' : 'live' }), err) }
+  };
+};
 const db = {
   collection: p => colRef(p),
   doc: p => docRef(p),
+  setMode: m => { MODE = m === 'lite' ? 'lite' : 'full' },
+  info: () => ({ mode: MODE, cache: NOCACHE ? 'memory' : 'device', online: navigator.onLine, uid: !!uid(), adapter: 3 }),
+  async resetCache() {
+    try { localStorage.setItem('legacy_nocache', '1') } catch (e) {}
+    try {
+      const names = indexedDB.databases ? (await indexedDB.databases()).map(d => d.name) : [];
+      names.filter(n => n && /firestore/i.test(n)).forEach(n => { try { indexedDB.deleteDatabase(n) } catch (e) {} });
+    } catch (e) {}
+  },
+  useCacheAgain() { try { localStorage.removeItem('legacy_nocache') } catch (e) {} },
   auth: {
     ready: () => auth.authStateReady(),
     uid,

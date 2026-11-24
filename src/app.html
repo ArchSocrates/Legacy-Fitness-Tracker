@@ -555,33 +555,31 @@ function hsl2hex(h,s,l){h=((h%360)+360)%360/360;const f=(p,q,t)=>{t=(t+1)%1;retu
 const hueOf=hex=>rgb2hsl(h2r(hex))[0];
 const retint=(hex,hue,sm)=>{const[,s,l]=rgb2hsl(h2r(hex));return hsl2hex(hue,clamp(s*sm,0,1),l)};
 const rgba=(hex,a)=>{const c=h2r(hex);return'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'};
-/* palettes: scene hue + accent for light and dark skies */
-const PALS={
- auto:{n:'Sky',dot:'#3d8fe0'},
- ember:{n:'Ember',h:14,s:1.05,acc:['#b4301a','#ff7a55'],dot:'#e2552f'},
- ocean:{n:'Ocean',h:192,s:.95,acc:['#0a6a86','#5ed0e8'],dot:'#1d9bbd'},
- forest:{n:'Forest',h:138,s:.8,acc:['#1d6b40','#7fe0a0'],dot:'#2f9b62'},
- violet:{n:'Violet',h:268,s:.95,acc:['#6a3fc0','#c3a6ff'],dot:'#8a62e0'},
- rose:{n:'Rose',h:336,s:.9,acc:['#b02a63','#ff9cc4'],dot:'#e0527f'},
- gold:{n:'Gold',h:42,s:1,acc:['#945f00','#ffd05a'],dot:'#e0a020'},
- mono:{n:'Mono',h:0,s:0,acc:['#1c1c1c','#f2f2f2'],dot:'#888888'},
- custom:{n:'Custom',dot:'#c8391f'}
-};
-const LOOK_DEF={pal:'auto',acc:'#c8391f',scene:'#3d8fe0',dith:'bayer8',px:4,mot:'auto',tmr:'auto'};
+/* three colours: background, ink (mountain + text), accent (sun + highlights) */
+const PRESETS=[
+ ['Classic','#f7f6f2','#121212','#e0452b'],['Night','#0f0f10','#f2f1ec','#e0452b'],['Ocean','#f6f7f7','#121416','#1f7fd1'],
+ ['Forest','#f6f6f1','#131512','#2f9b5b'],['Gold','#101010','#f3efe4','#e3a21c'],['Rose','#fbf7f6','#161214','#de4f7f'],
+ ['Mono','#ffffff','#000000','#8a8a8a'],['Ink','#e9e6dd','#1d2a44','#e06a2b']
+];
+const LOOK_DEF={bg:'#f7f6f2',ink:'#121212',acc:'#e0452b',dith:'bayer8',px:4,mot:'auto',tmr:'auto',v:3};
+const isHex=c=>typeof c==='string'&&/^#[0-9a-f]{6}$/i.test(c);
+function normLook(j){
+  const o=Object.assign({},LOOK_DEF);if(!j||typeof j!=='object')return o;
+  ['dith','mot','tmr'].forEach(k=>{if(typeof j[k]==='string')o[k]=j[k]});if([3,4,6].includes(+j.px))o.px=+j.px;
+  if(j.v===3){['bg','ink','acc'].forEach(k=>{if(isHex(j[k]))o[k]=j[k].toLowerCase()})}
+  else if(j.pal==='custom'&&isHex(j.acc))o.acc=j.acc.toLowerCase(); // older look settings: keep a custom accent, drop the rest
+  return o;
+}
 let LOOK=Object.assign({},LOOK_DEF);
-(function(){try{const j=JSON.parse(localStorage.getItem('legacy_look')||'null');if(j)LOOK=Object.assign({},LOOK_DEF,j)}catch(e){}})();
+(function(){try{LOOK=normLook(JSON.parse(localStorage.getItem('legacy_look')||'null'))}catch(e){}})();
 function saveLook(){try{localStorage.setItem('legacy_look',JSON.stringify(LOOK))}catch(e){}if(S.profile){S.profile.look=Object.assign({},LOOK);if(S.P)S.P.look=Object.assign({},LOOK);saveProfile()}}
 const motionOn=()=>LOOK.mot==='off'?false:LOOK.mot==='auto'?!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches):true;
-/* theme = time of day, tinted by palette */
-function lookTheme(min){
-  const th=themeAt(min),P=PALS[LOOK.pal]||PALS.auto;
-  let hue=null,sm=1;
-  if(LOOK.pal==='custom'){hue=hueOf(LOOK.scene);sm=1}else if(P.h!=null){hue=P.h;sm=P.s}
-  if(hue!=null)['sky1','sky2','m1','m2','m3'].forEach(k=>{th[k]=retint(th[k],hue,sm)});
-  if(LOOK.pal==='mono')th.orb=retint(th.orb,0,0);
-  th.accL=LOOK.pal==='custom'?LOOK.acc:(P.acc?P.acc[0]:th.acL);
-  th.accD=LOOK.pal==='custom'?mix(LOOK.acc,'#ffffff',.25):(P.acc?P.acc[1]:th.acD);
-  return th;
+const contrast=(a,b)=>{const x=lumOf(a),y=lumOf(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+function lookTheme(){
+  const bg=LOOK.bg,L=lumOf(bg)>.4;let ink=LOOK.ink;
+  if(contrast(bg,ink)<3)ink=L?'#121212':'#f2f1ec'; // keep text readable whatever colours are picked
+  const acc=LOOK.acc;
+  return{light:L,bg,ink,acc,sky1:bg,sky2:bg,orb:acc,accL:acc,accD:acc,m3:ink};
 }
 function tileUri(color,kind){
   const c=encodeURIComponent(color);
@@ -589,75 +587,64 @@ function tileUri(color,kind){
   return"url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'>"+r+"</svg>\")";
 }
 function themeVars(th){
-  const L=th.light,acc=L?th.accL:th.accD,tx=L?'#1c1814':'#f3eee2',base=L?mix('#fdf8ec',th.sky2,.14):mix('#17142e',th.sky1,.4);
-  const field=L?mix(base,'#000000',.05):mix(base,'#ffffff',.08),field2=L?mix(base,'#000000',.11):mix(base,'#ffffff',.14);
-  const seal=L?mix(acc,'#d03a20',0):acc,ok=L?'#24703f':'#7fd6a3',bad=L?'#b3261e':'#ff8a8a',shd=L?mix(tx,th.m3,.25):'#000000';
-  const v={'--sky1':th.sky1,'--sky2':th.sky2,'--m1':th.m1,'--m2':th.m2,'--m3':th.m3,'--orb':th.orb,
-   '--tx':tx,'--mu':L?'#4a4236':'#bdb7cf','--line':rgba(tx,.26),'--track':rgba(tx,.18),'--ink':tx,'--bd':tx,'--shd':shd,
-   '--seal':seal,'--panel':base,'--panel-s':base,'--field':field,'--field2':field2,
-   '--acc':acc,'--acc-t':lumOf(acc)>.38?'#16120e':'#ffffff','--ok':ok,'--bad':bad,
-   '--d50':tileUri(rgba(shd,L?.5:.7),'50'),'--d25':tileUri(rgba(shd,L?.4:.6),'25'),
+  const L=th.light,bg=th.bg,tx=th.ink,acc=th.acc;
+  const base=mix(bg,tx,.02),field=mix(bg,tx,L?.05:.08),field2=mix(bg,tx,L?.11:.15);
+  const ok=tx,bad=L?'#c62828':'#ff7a7a',shd=tx,mu=mix(tx,bg,.38);
+  // accent used as text on the background must stay readable: nudge it toward the ink if needed
+  const accT=contrast(acc,base)>=2.6?acc:mix(acc,tx,.45);
+  const v={'--sky1':bg,'--sky2':bg,'--m1':tx,'--m2':tx,'--m3':tx,'--orb':acc,
+   '--tx':tx,'--mu':mu,'--line':rgba(tx,.26),'--track':rgba(tx,.16),'--ink':tx,'--bd':tx,'--shd':shd,
+   '--seal':accT,'--panel':base,'--panel-s':base,'--field':field,'--field2':field2,
+   '--acc':accT,'--acc-t':lumOf(accT)>.38?'#121212':'#ffffff','--ok':ok,'--bad':bad,
+   '--d50':tileUri(rgba(shd,.5),'50'),'--d25':tileUri(rgba(shd,.4),'25'),
    '--bw':LOOK.px>=6?'3px':'2px','--sh':LOOK.px>=6?'5px':LOOK.px<=3?'3px':'4px'};
-  [['acc',acc,[12,14,18,22,25,50]],['seal',seal,[8,10]],['ok',ok,[16,20]],['bad',bad,[14,16,45]]].forEach(([n,c,ls])=>ls.forEach(a=>{v['--'+n+'-'+a]=rgba(c,a/100)}));
+  [['acc',accT,[12,14,18,22,25,50]],['seal',accT,[8,10]],['ok',ok,[16,20]],['bad',bad,[14,16,45]]].forEach(([n,c,ls])=>ls.forEach(a=>{v['--'+n+'-'+a]=rgba(c,a/100)}));
   return v;
 }
-/* ---- the dithered scene ---- */
+/* ---- the scene: one mountain, one sun, three colours. Drawn once, redrawn only when size or colours change ---- */
 const vnoise=(x,y,s)=>{const xi=Math.floor(x),yi=Math.floor(y),fx=x-xi,fy=y-yi,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy),a=hash2(xi,yi,s),b=hash2(xi+1,yi,s),c=hash2(xi,yi+1,s),d=hash2(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v};
-let SC={key:'',ridges:null,trees:null};
-function sceneGeom(W,H){
-  const key=W+'x'+H;if(SC.key===key)return SC;
-  const ridge=(base,peaks,rough,seed)=>{const a=new Float32Array(W);for(let x=0;x<W;x++){let m=0;for(const p of peaks){const k=1-Math.abs(x-p[0]*W)/(p[2]*W);if(k>0)m=Math.max(m,p[1]*H*Math.pow(k,p[3]))}a[x]=base*H-m+(vnoise(x*.18,seed,seed)-.5)*rough+(vnoise(x*.6,seed+5,seed)-.5)*rough*.4}return a};
-  const far=ridge(.70,[[.62,.31,.5,1.18],[.2,.15,.32,1.25],[.97,.13,.28,1.2]],3.2,3);
-  const mid=ridge(.77,[[.27,.19,.4,1.1],[.84,.15,.36,1.12],[.55,.07,.3,1.2]],2.4,11);
-  const near=new Float32Array(W);for(let x=0;x<W;x++)near[x]=.875*H-(Math.sin(x*.05)*.014*H+Math.sin(x*.021+2)*.028*H+.02*H);
-  const trees=[];let q=11;const R=()=>{q=(q*16807)%2147483647;return q/2147483647};
-  const nt=Math.round(W/5);for(let i=0;i<nt;i++){const x=Math.floor(R()*W),h=Math.round(H*(.035+R()*.05));trees.push([x,h])}
-  SC={key,far,mid,near,trees,W,H};return SC;
-}
+let _sceneKey='';
 function renderScene(cv,th,min,tt,dims){
   const px=LOOK.px,W=dims?dims[0]:Math.max(8,Math.ceil(innerWidth/px)),H=dims?dims[1]:Math.max(8,Math.ceil(innerHeight/px));
+  const key=[W,H,th.bg,th.ink,th.acc,LOOK.dith].join('|');
+  if(!dims&&key===_sceneKey&&cv.width===W)return;
   if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H}
-  const ctx=cv.getContext&&cv.getContext('2d');if(!ctx)return;const img=ctx.createImageData(W,H),d=img.data,thr=thrFn(LOOK.dith),G=sceneGeom(W,H);
-  const hz=r=>h2r(r),L=th.light,haze=mix(th.sky2,'#ffffff',L?.3:.08);
-  const skyP=[th.sky1,mix(th.sky1,th.sky2,.35),mix(th.sky1,th.sky2,.7),th.sky2,haze].map(hz);
-  const mP=(c,fade)=>{const base=mix(c,haze,fade);return[mix(base,'#000000',L?.42:.55),mix(base,'#000000',L?.2:.3),base,mix(base,'#ffffff',L?.28:.16)].map(hz)};
-  const farP=mP(th.m1,.1),midP=mP(th.m2,.04),nearP=mP(th.m3,0),snowP=[mix(haze,th.m1,.35),haze,'#ffffff','#ffffff'].map(hz);
-  const day=min>=360&&min<1080,pp=day?(min-360)/720:(((min-1080)+1440)%1440)/720,ox=(.08+.84*clamp(pp,0,1))*W,oy=(.62-Math.sin(Math.PI*clamp(pp,0,1))*.46)*H*.82,orad=Math.min(W,H)*(day?.075:.055);
-  const orbC=hz(L&&LOOK.pal==='auto'?mix(th.orb,'#fff0c0',.55):th.orb),lightSide=ox<W*.5?1:-1,st=th.stars,cloudT=(tt||0)*.6;
-  const pick=(P,t,x,y)=>{const pos=clamp(t,0,.9999)*(P.length-1),i=Math.floor(pos),f=pos-i;return P[i+(f>thr(x,y)?1:0)]};
+  const ctx=cv.getContext&&cv.getContext('2d');if(!ctx)return;
+  const img=ctx.createImageData(W,H),d=img.data,thr=thrFn(LOOK.dith);
+  const BG=h2r(th.bg),INK=h2r(th.ink),ACC=h2r(th.acc);
   const put=(i,c)=>{d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255};
-  const hor=H*.78,farPeak=Math.min.apply(null,G.far),snowLine=farPeak+(H*.07);
-  for(let y=0;y<H;y++){
-    for(let x=0;x<W;x++){
-      const i=(y*W+x)*4;let c;
-      if(y>=G.near[x]){
-        const dep=y-G.near[x],sl=(G.near[Math.min(W-1,x+2)]-G.near[Math.max(0,x-2)])*.2*lightSide;
-        c=pick(nearP,.5+sl*.6-clamp(dep/(H*.18),0,1)*.28+(dep<2?.2:0),x,y);
-      }else if(y>=G.mid[x]){
-        const dep=y-G.mid[x],sl=(G.mid[Math.min(W-1,x+2)]-G.mid[Math.max(0,x-2)])*.2*lightSide;
-        c=pick(midP,.52+sl*.5-clamp(dep/(H*.2),0,1)*.3+(1-clamp(dep/(H*.12),0,1))*.18,x,y);
-      }else if(y>=G.far[x]){
-        const dep=y-G.far[x],sl=(G.far[Math.min(W-1,x+2)]-G.far[Math.max(0,x-2)])*.2*lightSide;
-        if(G.far[x]<snowLine&&dep<(snowLine-G.far[x])*1.25+Math.sin(x*.5)*1.6)c=pick(snowP,.55+sl*.5+(1-dep/(H*.09))*.2,x,y);
-        else c=pick(farP,.5+sl*.5-clamp(dep/(H*.22),0,1)*.35+(1-clamp(dep/(H*.1),0,1))*.14,x,y);
-      }else{
-        const g=clamp(y/hor,0,1);c=pick(skyP,g,x,y);
-        const dx=x-ox,dy=y-oy,dd=Math.sqrt(dx*dx+dy*dy);
-        if(dd<orad)c=orbC;
-        else{const gl=clamp(1-(dd-orad)/(orad*2.6),0,1);if(gl*gl*.85>thr(x,y))c=hz(mix(th.orb,th.sky2,.55))}
-        if(st>.05&&y<hor*.72){const hh=hash2(x,y,3);if(hh<.011*st&&hash2(x,y,Math.floor(tt*.9))>.25)c=[255,255,255]}
-        const cn=vnoise(x*.07+cloudT*.5,y*.16,5)*.7+vnoise(x*.16+cloudT,y*.32,9)*.3,band=1-Math.abs((y/H-.3)/.22);
-        if(band>0&&cn*band-.28>thr(x,y)*.6)c=hz(mix(th.sky2,'#ffffff',L?.55:.12));
-      }
-      put(i,c);
-    }
+  // shape: a far ridge (dithered, reads lighter) and the main peak (solid), sitting in the lower part of the screen
+  const tall=H>W,peakX=tall?.5:.62,peakY=tall?.56:.46,baseY=tall?.80:.84;
+  const far=new Float32Array(W),near=new Float32Array(W);
+  for(let x=0;x<W;x++){
+    const u=x/W;
+    const f1=Math.max(0,1-Math.abs(u-(tall?.22:.24))/.34),f2=Math.max(0,1-Math.abs(u-(tall?.86:.9))/.3);
+    far[x]=H*(baseY-.02)-H*(.2*Math.pow(f1,1.25)+.15*Math.pow(f2,1.2))+(vnoise(x*.25,3,3)-.5)*H*.012;
+    const k=Math.max(0,1-Math.abs(u-peakX)/(tall?.62:.42));
+    near[x]=H*baseY-H*(baseY-peakY)*Math.pow(k,1.35)+(vnoise(x*.3,9,11)-.5)*H*.014*k;
   }
-  /* pines on the near hill */
-  const tc=hz(mix(th.m3,'#000000',L?.45:.55)),sc=hz(mix(th.m3,'#000000',L?.3:.4));
-  for(const[tx,h]of G.trees){const by=Math.round(G.near[tx])+2;for(let k=0;k<h;k++){const hw=Math.floor(k*.34)+(k%3===0?1:0),yy=by-h+k;for(let xx=-hw;xx<=hw;xx++){const X=tx+xx;if(X<0||X>=W||yy<0||yy>=H)continue;put((yy*W+X)*4,xx>0&&(k+xx)%3===0?sc:tc)}}if(by>=0&&by<H)for(let k=0;k<3&&by+k<H;k++)put(((by+k)*W+tx)*4,tc)}
-  /* ground */
-  for(let y=Math.floor(H*.93);y<H;y++)for(let x=0;x<W;x++){const t=(y-H*.93)/(H*.07);put((y*W+x)*4,thr(x,y)<.45+t*.5?tc:sc)}
-  ctx.putImageData(img,0,0);
+  const sx=W*(tall?.74:.8),sy=H*(tall?.2:.24),sr=Math.max(3,Math.min(W,H)*(tall?.085:.1));
+  const snow=H*peakY+H*(baseY-peakY)*.22,lightL=sx<W*peakX;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const i=(y*W+x)*4,t=thr(x,y);let c=BG;
+    if(y>=near[x]){
+      c=INK;
+      // snow cap with a ragged dithered edge, and a lit face toward the sun
+      const edge=snow+Math.sin(x*.9)*1.2+(hash2(x,0,5)-.5)*2;
+      if(y<edge)c=BG;else if(y<edge+3&&t<.5)c=BG;
+      else{const sd=(lightL?W*peakX-x:x-W*peakX)/(W*.42);if(sd>0){const dy=(y-near[x])/(H*.16),g=clamp(sd*5,0,1)*clamp(1-sd,0,1)*clamp(1-dy,0,1);if(t<g*.32)c=BG}}
+    }else if(y>=far[x]){
+      c=t<.42?INK:BG; // far ridge: half-tone ink
+    }else{
+      const dx=x-sx,dy=y-sy,dd=Math.sqrt(dx*dx+dy*dy);
+      if(dd<=sr)c=ACC;
+      else if(dd<sr*1.9){const g=1-(dd-sr)/(sr*.9);if(t<g*g*.42)c=ACC}
+    }
+    put(i,c);
+  }
+  // ground line
+  for(let y=Math.floor(H*baseY)+1;y<H;y++)for(let x=0;x<W;x++)put((y*W+x)*4,INK);
+  ctx.putImageData(img,0,0);if(!dims)_sceneKey=key;
 }
 function buildSky(){
   if($('#sky'))return;
@@ -668,17 +655,15 @@ function buildSky(){
 }
 let _skyTh=null,_skyMin=0;
 function applySky(force){
-  const min=skyMinute(),th=lookTheme(min),v=themeVars(th),root=document.documentElement;
+  const th=lookTheme(),v=themeVars(th),root=document.documentElement;
   Object.entries(v).forEach(([k,x])=>root.style.setProperty(k,x));
   root.dataset.mode=th.light?'light':'dark';root.dataset.mot=motionOn()?'on':'off';
-  _skyTh=th;_skyMin=min;
-  const cv=$('#dc');if(cv)renderScene(cv,th,min,Date.now()/1000);
-  let m=document.querySelector('meta[name=theme-color]');if(!m){m=document.createElement('meta');m.name='theme-color';document.head.appendChild(m)}m.content=th.sky1;
+  _skyTh=th;_skyMin=0;if(force)_sceneKey='';
+  const cv=$('#dc');if(cv)renderScene(cv,th,0,0);
+  let m=document.querySelector('meta[name=theme-color]');if(!m){m=document.createElement('meta');m.name='theme-color';document.head.appendChild(m)}m.content=th.bg;
 }
 function fitMtn(){clearTimeout(fitMtn._t);fitMtn._t=setTimeout(()=>applySky(true),120)}
 window.addEventListener('resize',fitMtn);
-/* gentle animation: twinkling stars and drifting clouds */
-setInterval(()=>{if(document.hidden||!motionOn()||LOOK.mot==='calm'&&Math.random()<.5)return;const cv=$('#dc');if(cv&&_skyTh)renderScene(cv,_skyTh,_skyMin,Date.now()/1000)},LOOK.px>=6?600:1000);
 /* ---- button ripples and tab wipes ---- */
 document.addEventListener('pointerdown',e=>{
   if(!motionOn())return;
@@ -753,12 +738,14 @@ function dtHtml(kind,txt,big){
 }
 /* ---- appearance card (You tab) ---- */
 function lookCard(){
-  const sp=skyPick(),sw=([k,l])=>`<button class="pal${LOOK.pal===k?' on':''}" data-act="lookSet" data-a="pal" data-b="${k}" aria-label="${l}"><i style="background:${PALS[k].dot}"></i><span>${l}</span></button>`;
   const seg=(key,list)=>`<div class="seg" style="flex-wrap:wrap">${list.map(([v,l])=>`<button class="${String(LOOK[key])===String(v)?'on':''}" data-act="lookSet" data-a="${key}" data-b="${v}">${l}</button>`).join('')}</div>`;
-  return`<div class="card" style="margin-top:20px"><h3>Appearance</h3><p class="mu sm" style="margin-top:0">Make Legacy look the way you like. Changes apply instantly.</p>
-  <div class="lbl" style="margin:12px 0 8px">Colourway</div><div class="pals">${Object.keys(PALS).map(k=>sw([k,PALS[k].n])).join('')}</div>
-  ${LOOK.pal==='custom'?`<div class="row" style="margin-top:10px;gap:14px"><label class="sm">Scene <input type="color" value="${LOOK.scene}" data-ch="lookColor" data-a="scene" style="width:54px;height:38px;padding:2px;min-height:0"></label><label class="sm">Accent <input type="color" value="${LOOK.acc}" data-ch="lookColor" data-a="acc" style="width:54px;height:38px;padding:2px;min-height:0"></label></div>`:''}
-  <div class="lbl" style="margin:14px 0 8px">Time of day</div><div class="seg">${[['auto','Auto'],['dawn','Dawn'],['day','Day'],['dusk','Dusk'],['night','Night']].map(([k,l])=>`<button class="${sp===k?'on':''}" data-act="sky" data-a="${k}">${l}</button>`).join('')}</div>
+  const cur=[LOOK.bg,LOOK.ink,LOOK.acc].join();
+  const pre=PRESETS.map((p,i)=>`<button class="pal${p.slice(1).join()===cur?' on':''}" data-act="lookPreset" data-a="${i}" aria-label="${p[0]}"><i style="background:${p[1]};background-image:none;box-shadow:inset 0 0 0 3px ${p[2]}"><b style="display:block;width:45%;height:45%;margin:27% auto 0;border-radius:50%;background:${p[3]}"></b></i><span>${p[0]}</span></button>`).join('');
+  const pick=(k,l)=>`<label class="sm" style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">${l}<input type="color" value="${LOOK[k]}" data-ch="lookColor" data-a="${k}" style="width:64px;height:42px;padding:2px;min-height:0"></label>`;
+  return`<div class="card" style="margin-top:20px"><h3>Appearance</h3><p class="mu sm" style="margin-top:0">Three colours run the whole app: the background, the ink for the mountain and text, and one accent for the sun and highlights.</p>
+  <div class="lbl" style="margin:12px 0 8px">Presets</div><div class="pals">${pre}</div>
+  <div class="lbl" style="margin:14px 0 8px">Your colours</div><div class="row" style="gap:16px;flex-wrap:wrap">${pick('bg','Background')}${pick('ink','Mountain and text')}${pick('acc','Accent')}</div>
+  ${contrast(LOOK.bg,LOOK.ink)<3?'<p class="sm" style="color:var(--bad);margin:8px 0 0">Those two colours are too close, so text uses black or white to stay readable.</p>':''}
   <div class="lbl" style="margin:14px 0 8px">Dither style</div>${seg('dith',DITHERS)}
   <div class="lbl" style="margin:14px 0 8px">Pixel size</div>${seg('px',[[3,'Fine'],[4,'Normal'],[6,'Chunky']])}
   <div class="lbl" style="margin:14px 0 8px">Countdown style</div>${seg('tmr',[['auto','Auto'],['moon','Moon'],['tide','Tide'],['dissolve','Dissolve'],['ring','Ring']])}
@@ -914,17 +901,41 @@ function resetState(){
   Object.keys(W).forEach(k=>delete W[k]);T=null;KEY=null;
 }
 function signOut(){try{localStorage.removeItem('legacy_session')}catch(e){}try{DB&&DB.auth&&DB.auth.signOut()}catch(e){}resetState();authScreen('in')}
+/* ---- loading: three independent routes to the data, first good answer wins ----
+   live   = realtime listener (also keeps the app in sync afterwards)
+   cache  = what this device already has (instant, works offline)
+   direct = plain HTTPS request that skips the realtime channel and the device cache */
+let LD=null,DONE=0;
+function ldSet(k,v){if(!LD)return;LD[k]=v;ldPaint()}
+function ldPaint(){
+  const b=document.getElementById('ldbox');if(!b||!LD||S.loaded)return;
+  const sec=Math.round((Date.now()-LD.t0)/1000),inf=(DB&&DB.info)?DB.info():{};
+  const st=document.getElementById('ldst');if(st)st.textContent=LD.stage;
+  const tt=document.getElementById('ldt');if(tt)tt.textContent=sec+'s';
+  const dg=document.getElementById('lddg');
+  if(dg){dg.style.display=sec>=12||LD.err?'block':'none';dg.textContent=`Legacy v${VER} · ${inf.online===false?'OFFLINE':'online'} · ${inf.uid?'signed in':'NOT signed in'} · storage: ${inf.cache||'?'}\nlive: ${LD.live}\ndevice copy: ${LD.cache}\ndirect: ${LD.direct}${LD.err?'\nerror: '+LD.err:''}`}
+  const hb=document.getElementById('ldhelp');if(hb)hb.style.display=sec>=15||LD.err?'flex':'none';
+}
+function loadingHtml(){
+  return`<div class="lock" id="ldbox"><div class="word">LEGACY</div><div class="mu" id="ldst">${esc(LD?LD.stage:'Loading your data…')}</div><div class="mu sm" id="ldt" style="opacity:.6">0s</div>
+  <pre id="lddg" style="display:none;text-align:left;font:11px/1.5 monospace;white-space:pre-wrap;max-width:420px;margin:10px auto 0;padding:8px;border:2px dashed var(--line)"></pre>
+  <div id="ldhelp" style="display:none;flex-direction:column;gap:8px;margin-top:12px;min-width:240px"><button class="btn" data-act="ldRetry">Try again</button><button class="btn ghost s" data-act="ldReset">Clear this device's copy and reload</button><button class="btn ghost s" data-act="ldOut">Sign out</button></div></div>`;
+}
+setInterval(()=>{if(LD&&!S.loaded)ldPaint()},1000);
 function enter(u,key){
-  resetState();S.user=u;KEY=key;loadActive();render();
-  const stage=t=>{const e=document.querySelector('.lock .mu');if(e&&!S.loaded)e.textContent=t};
-  const slowT=setTimeout(()=>{if(!S.loaded){S.slow=true;render();stage('Still connecting… waiting for the database ('+(DB&&DB.auth&&DB.auth.uid()?'signed in':'not signed in')+')')}},8000);
-  const proc=async snap=>{
-      stage('Got '+snap.docs.length+' records, unlocking…');
-
-      const my=++SEQ,out={};
-      await Promise.all(snap.docs.map(async d=>{try{out[d.id.slice(u.length+1)]=await open(KEY,d.data())}catch(e){}}));
-      if(my!==SEQ||S.user!==u)return;
-      clearTimeout(slowT);
+  resetState();S.user=u;KEY=key;loadActive();
+  const L0={t0:Date.now(),stage:'Connecting to the database…',live:'waiting…',cache:'not checked yet',direct:'not needed yet',err:''};LD=L0;
+  render();
+  const mine=()=>LD===L0&&S.user===u;
+  const errTxt=e=>String(e&&(e.code||e.message)||e).slice(0,160);
+  const apply=async(snap,src)=>{
+    if(!mine())return;
+    const my=++SEQ,out={};
+    if(!S.loaded)ldSet('stage','Unlocking '+snap.docs.length+' records…');
+    await Promise.all(snap.docs.map(async d=>{try{out[d.id.slice(u.length+1)]=await open(KEY,d.data())}catch(e){}}));
+    if(!mine())return;
+    // a newer answer already finished: skip this older one (but never skip while nothing has loaded)
+    if(my<DONE)return;DONE=my;
       const logs={};let prof=out.profile||null,wts=out.weights?out.weights.entries||[]:null;
       Object.keys(out).forEach(id=>{if(id.startsWith('log_'))logs[id.slice(4)]=out[id].sessions||[]});
       if(!(W.profile&&W.profile.busy))S.profile=normP(prof);
@@ -937,22 +948,53 @@ function enter(u,key){
       const nl={};
       new Set([...Object.keys(logs),...Object.keys(S.logs)]).forEach(m=>{const w=W['log_'+m];if(w&&w.busy){nl[m]=S.logs[m]}else if(logs[m])nl[m]=logs[m]});
       S.logs=nl;
-      const first=!S.loaded;S.loaded=true;S.slow=false;
+      const first=!S.loaded;S.loaded=true;S.slow=false;if(first&&src!=='cache')S.fromDevice=false;if(src==='cache')S.fromDevice=true;
       if(first){S.todayEq=S.profile&&S.profile.equip?S.profile.equip.slice():['bw']}
-      if(S.profile&&S.profile.look){LOOK=Object.assign({},LOOK_DEF,S.profile.look);try{localStorage.setItem('legacy_look',JSON.stringify(LOOK))}catch(e){}applySky(true)}
-      if(!document.activeElement||!/INPUT|SELECT/.test(document.activeElement.tagName))render();
+      if(S.profile&&S.profile.look){LOOK=normLook(S.profile.look);try{localStorage.setItem('legacy_look',JSON.stringify(LOOK))}catch(e){}applySky(true)}
+      LD.src=src;
+      try{if(!document.activeElement||!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)||first)render()}catch(e){console.error(e)}
       if(first&&!S.profile)checkLegacy();
-      if(first&&S.profile){applyReminders();checkUpdate();pubBoard();announce()}else if(first)lsSet('legacy_seen_ver',VER);
-    };
+      if(first&&S.profile){try{applyReminders();checkUpdate();pubBoard();announce()}catch(e){console.error(e)}}else if(first)lsSet('legacy_seen_ver',VER);
+  };
+  const feed=src=>snap=>apply(snap,src).catch(e=>{console.error(e);L0.err=src+': '+errTxt(e&&(e.stack||e.message)||e);ldPaint();showErr('load ('+src+'): '+(e&&(e.stack||e.message)||e))});
+  // 1. live listener
   try{
-    stage('Connecting to the database…');
-    let got=false;
-    const wrap=snap=>{got=true;return proc(snap).catch(e=>{console.error(e);showErr('load: '+(e&&(e.stack||e.message)||e))})};
-    setTimeout(()=>{if(!got&&!S.loaded&&S.user===u){stage('Trying another way to connect…');col.where('u','==',u).get().then(wrap).catch(e=>showErr('get: '+(e&&(e.code||e.message)||e)))}},9000);
-    unsub=col.where('u','==',u).onSnapshot(wrap,err=>{console.error(err);showErr('db: '+(err&&(err.code||err.message)||err));lockScreen('We could not load your data. ['+(err&&err.code||'error')+']')});
-  }catch(e){lockScreen('We could not load your data. Please try again.')}
+    unsub=col.where('u','==',u).onSnapshot(snap=>{
+      if(!mine())return;
+      L0.live=(snap.fromCache?'answered from device copy':'answered')+' ('+snap.docs.length+')';
+      if(snap.fromCache&&!snap.docs.length&&!S.loaded){ldPaint();return} // an empty device copy is not an answer
+      if(!snap.fromCache&&DB.setMode)DB.setMode('full');
+      feed(snap.fromCache?'live-cache':'live')(snap);
+    },err=>{
+      if(!mine())return;
+      L0.live='error '+errTxt(err);ldPaint();console.error(err);
+      if(!S.loaded&&L0.direct!=='trying…'&&!/answered/.test(L0.direct))tryDirect();
+    });
+  }catch(e){L0.live='could not start: '+errTxt(e);tryDirect()}
+  // 2. device copy, after a short wait
+  setTimeout(()=>{
+    if(!mine()||S.loaded||!col.where('u','==',u).getCached)return;
+    L0.cache='checking…';ldPaint();
+    col.where('u','==',u).getCached().then(s=>{L0.cache='has '+s.docs.length+' records';ldPaint();if(s.docs.length&&!S.loaded){ldSet('stage','Opening the copy saved on this device…');feed('cache')(s)}}).catch(e=>{L0.cache='none ('+errTxt(e)+')';ldPaint()});
+  },2500);
+  // 3. direct request, if the live listener has not answered
+  let directTries=0;
+  function tryDirect(){
+    if(!mine()||S.loaded&&LD.src!=='cache')return;
+    const c=col.where('u','==',u);if(!c.getDirect){L0.direct='not available';ldPaint();return}
+    directTries++;L0.direct='trying…';ldSet('stage','Trying a direct connection…');
+    withTimeout(c.getDirect(),20000).then(s=>{
+      if(!mine())return;if(!s)throw{code:'no answer in 20s'};L0.direct='answered ('+s.docs.length+')';ldPaint();
+      if(DB.setMode&&!/^answered \(/.test(L0.live))DB.setMode('lite');
+      if(!S.loaded||LD.src==='cache')feed('direct')(s);
+    }).catch(e=>{
+      if(!mine())return;L0.direct='error '+errTxt(e);ldPaint();console.error(e);
+      if(directTries<3&&!S.loaded)setTimeout(tryDirect,4000*directTries);
+      else if(!S.loaded){L0.err='Could not reach the database ('+errTxt(e)+')';ldSet('stage','Could not reach the database.')}
+    });
+  }
+  setTimeout(()=>{if(mine()&&(!S.loaded||LD.src==='cache')&&!/^answered \(/.test(L0.live))tryDirect()},5000);
 }
-/* earlier versions kept data privately under the viewer's Claude account: offer to bring it over */
 async function checkLegacy(){
   if(!LEG||S.legChecked)return;S.legChecked=true;
   try{
@@ -1604,7 +1646,7 @@ function viewOf(t){
 }
 function render(){
   const app=$('#app');
-  if(!S.loaded){app.innerHTML=`<div class="lock"><div class="word">LEGACY</div><div class="mu">${S.slow?'Still connecting… this is taking longer than usual.':'Loading your data…'}</div></div>`;return}
+  if(!S.loaded){if(!document.getElementById('ldbox'))app.innerHTML=loadingHtml();ldPaint();return}
   if(!S.profile){app.innerHTML=header()+setupView();updatePreview();return}
   S.nav=S.nav||[];if(S._lt&&S._lt!==S.tab&&!S._back){S.nav.push(S._lt);if(S.nav.length>30)S.nav.shift()}if(S._lt&&S._lt!==S.tab)wipeFx();S._lt=S.tab;S._back=false;
   let v=viewOf(S.tab);
@@ -2841,7 +2883,7 @@ meView=function(){
 
 /* ================= v2: what's new, native bridge, back button, links ================= */
 const WN=[
- {g:'peak',t:'A whole new look',x:'Legacy now has a dithered pixel style, with a mountain scene that follows the time of day. Make it yours in You, then Appearance: pick a colourway, set your own colours, change the dither style and pixel size, or turn animations down.'},
+ {g:'peak',t:'A whole new look',x:'Legacy now has a clean pixel style: one mountain, one sun, three colours. Make it yours in You, then Appearance: pick a preset or set your own background, ink and accent colours, and choose a dither style and pixel size.'},
  {g:'clock',t:'Pixel countdown timers',x:'Rest, work and get-ready timers now have their own look: a moon that waxes, water that drains, numbers that dissolve. Pick one style or let Legacy choose for each phase.'},
  {g:'bolt',t:'Log sets in one tap',x:'Same as last set repeats your last set instantly. Copy last session fills in what you did last time. Tap an effort number from 6 to 10 and Legacy remembers how hard each set felt.'},
  {g:'plate',t:'Plates and warm-ups',x:'On barbell lifts, Plates shows exactly what goes on each side of the bar. Warm-up builds a ladder of lighter sets up to your working weight.'},
@@ -2952,10 +2994,11 @@ Object.assign(A,{hcGo(){hcRefresh(true)}});
 setTimeout(()=>{if(window.LegacyNative&&window.LegacyNative.hcRead)hcRefresh(false)},4000);
 
 Object.assign(A,{
- lookSet(k,v){LOOK[k]=(k==='px')?+v:v;if(k==='pal'&&v!=='custom'&&PALS[v]&&PALS[v].acc){}saveLook();applySky(true);render();dtPaintAll()},
+ lookSet(k,v){LOOK[k]=(k==='px')?+v:v;saveLook();applySky(true);render();dtPaintAll()},
+ lookPreset(i){const p=PRESETS[+i];if(!p)return;LOOK.bg=p[1];LOOK.ink=p[2];LOOK.acc=p[3];saveLook();applySky(true);render();dtPaintAll()},
  lookReset(){LOOK=Object.assign({},LOOK_DEF);saveLook();applySky(true);render()},
 });
-Object.assign(CH,{lookColor(v,a){LOOK[a]=v;LOOK.pal='custom';saveLook();applySky(true);render()}});
+Object.assign(CH,{lookColor(v,a){if(!['bg','ink','acc'].includes(a)||!isHex(v))return;LOOK[a]=v.toLowerCase();saveLook();applySky(true);render();dtPaintAll()}});
 
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]');if(!el)return;
@@ -2965,17 +3008,36 @@ document.addEventListener('change',e=>{const el=e.target.closest('[data-ch]');if
 document.addEventListener('input',e=>{const el=e.target.closest('[data-in]');if(el&&I[el.dataset.in])I[el.dataset.in](el.value,el.dataset.a,el)});
 window.addEventListener('beforeunload',()=>{try{unsub&&unsub()}catch(e){}});
 
+Object.assign(A,{
+  ldRetry(){if(S.user&&KEY)enter(S.user,KEY);else init()},
+  async ldReset(){ldSet('stage','Clearing this device’s copy…');try{await DB.resetCache()}catch(e){}location.reload()},
+  ldOut(){signOut()}
+});
+/* ---- never leave a blank or stuck screen: extras fall back to the plain view, render failures show a way out ---- */
+function SAFE(cur,base,tag){return function(){try{return cur.apply(this,arguments)}catch(e){console.error(tag,e);noteErr(tag,e);return base.apply(this,arguments)}}}
+const ERRS=[];function noteErr(tag,e){ERRS.push(tag+': '+String(e&&(e.message||e)).slice(0,140));if(ERRS.length>8)ERRS.shift()}
+viewOf=SAFE(viewOf,_vo,'view');modalHtml=SAFE(modalHtml,_mh,'modal');wxCard=SAFE(wxCard,_wx,'exercise');wkView=SAFE(wkView,_wkv,'workout');
+tmView=SAFE(tmView,_tmv,'timer');homeView=SAFE(homeView,_hv,'home');trainView=SAFE(trainView,_tv,'train');meView=SAFE(meView,_mev,'you');
+{const _rg=render;let fails=0;render=function(){
+  try{_rg.apply(this,arguments);fails=0}
+  catch(e){
+    console.error('render',e);noteErr('screen',e);fails++;
+    if(fails===1&&S.loaded){try{S.modal=null;S.tour=null;S.tab=S.tab==='home'?'wk':'home';_rg.apply(this,arguments);return}catch(e2){noteErr('screen2',e2)}}
+    const app=$('#app');if(app)app.innerHTML=`<div class="lock"><div class="word">LEGACY</div><p class="mu" style="max-width:360px">Something on this screen failed to draw. Your data is safe.</p>
+     <pre style="text-align:left;font:11px/1.5 monospace;white-space:pre-wrap;max-width:420px;padding:8px;border:2px dashed var(--line)">v${VER}\n${esc(ERRS.join('\n'))}</pre>
+     <div style="display:flex;flex-direction:column;gap:8px;min-width:240px"><button class="btn" data-act="tab" data-a="home">Back to Home</button><button class="btn ghost s" data-act="ldOut">Sign out</button></div></div>`;
+  }}}
 const T_BOOT=Date.now();
 function showErr(m){
   if(S.errShown||/ResizeObserver|Script error/.test(m))return;
-  if(S.loaded&&Date.now()-T_BOOT>20000)return;
+  if(S.loaded&&Date.now()-T_BOOT>20000&&!/^load|render|screen/.test(m))return;
   S.errShown=1;const b=document.createElement('div');b.id='errbar';
   b.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:999;background:#b3261e;color:#fff;padding:10px;font:12px/1.4 monospace;white-space:pre-wrap;max-height:45vh;overflow:auto';
   b.textContent='Legacy hit a problem. Please screenshot this and send it:\n'+String(m).slice(0,700);b.onclick=()=>b.remove();document.body.appendChild(b);
 }
 window.addEventListener('error',e=>showErr((e.message||'error')+' @'+(e.lineno||'')+':'+(e.colno||'')));
 window.addEventListener('unhandledrejection',e=>{const r=e.reason;showErr(String(r&&(r.stack||r.message)||r))});
-buildSky();applySky();setInterval(applySky,30000);
+buildSky();applySky();
 init();
 })();
 </script>

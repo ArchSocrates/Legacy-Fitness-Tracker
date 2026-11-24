@@ -19,5 +19,6 @@ extra=('            <intent-filter>\n                <action android:name="andro
 m=re.search(r'(<activity\b[^>]*MainActivity[^>]*>)',s)
 assert m,'no MainActivity'
 s=s[:m.end()]+'\n'+extra+s[m.end():]
+s=s.replace('android:allowBackup="true"','android:allowBackup="false"')
 open(p,'w').write(s)
 print('manifest patched')

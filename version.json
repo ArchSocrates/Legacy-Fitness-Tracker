@@ -1,8 +1,9 @@
 {
-  "version": "2.0.2",
-  "color": "#8a4b1f",
+  "version": "2.0.3",
+  "color": "#e0452b",
   "notes": [
-    "Loading screen now shows each step, and retries another way if the database is slow to answer",
-    "Clear error messages instead of a stuck Loading screen"
+    "Fixed: the app getting stuck on Loading your data. Legacy now has three separate ways to reach your data and uses whichever answers first",
+    "New minimal look: one mountain, one sun, three colours you choose (background, ink, accent)",
+    "If anything ever stalls, the loading screen shows what it is waiting for, with Try again and Sign out buttons"
   ]
 }
