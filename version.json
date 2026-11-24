@@ -1,8 +1,8 @@
 {
-  "version": "2.0.1",
-  "color": "#4a3f8f",
+  "version": "2.0.2",
+  "color": "#8a4b1f",
   "notes": [
-    "Shows a clear error message if something goes wrong while opening, instead of sitting on Loading",
-    "Home screen extras can no longer block the app from opening"
+    "Loading screen now shows each step, and retries another way if the database is slow to answer",
+    "Clear error messages instead of a stuck Loading screen"
   ]
 }

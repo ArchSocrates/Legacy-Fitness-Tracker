@@ -916,9 +916,11 @@ function resetState(){
 function signOut(){try{localStorage.removeItem('legacy_session')}catch(e){}try{DB&&DB.auth&&DB.auth.signOut()}catch(e){}resetState();authScreen('in')}
 function enter(u,key){
   resetState();S.user=u;KEY=key;loadActive();render();
-  const slowT=setTimeout(()=>{if(!S.loaded){S.slow=true;render()}},10000);
-  try{
-    unsub=col.where('u','==',u).onSnapshot(async snap=>{
+  const stage=t=>{const e=document.querySelector('.lock .mu');if(e&&!S.loaded)e.textContent=t};
+  const slowT=setTimeout(()=>{if(!S.loaded){S.slow=true;render();stage('Still connecting… waiting for the database ('+(DB&&DB.auth&&DB.auth.uid()?'signed in':'not signed in')+')')}},8000);
+  const proc=async snap=>{
+      stage('Got '+snap.docs.length+' records, unlocking…');
+
       const my=++SEQ,out={};
       await Promise.all(snap.docs.map(async d=>{try{out[d.id.slice(u.length+1)]=await open(KEY,d.data())}catch(e){}}));
       if(my!==SEQ||S.user!==u)return;
@@ -941,7 +943,13 @@ function enter(u,key){
       if(!document.activeElement||!/INPUT|SELECT/.test(document.activeElement.tagName))render();
       if(first&&!S.profile)checkLegacy();
       if(first&&S.profile){applyReminders();checkUpdate();pubBoard();announce()}else if(first)lsSet('legacy_seen_ver',VER);
-    },err=>{console.error(err);lockScreen('We could not load your data. Please try again.')});
+    };
+  try{
+    stage('Connecting to the database…');
+    let got=false;
+    const wrap=snap=>{got=true;return proc(snap).catch(e=>{console.error(e);showErr('load: '+(e&&(e.stack||e.message)||e))})};
+    setTimeout(()=>{if(!got&&!S.loaded&&S.user===u){stage('Trying another way to connect…');col.where('u','==',u).get().then(wrap).catch(e=>showErr('get: '+(e&&(e.code||e.message)||e)))}},9000);
+    unsub=col.where('u','==',u).onSnapshot(wrap,err=>{console.error(err);showErr('db: '+(err&&(err.code||err.message)||err));lockScreen('We could not load your data. ['+(err&&err.code||'error')+']')});
   }catch(e){lockScreen('We could not load your data. Please try again.')}
 }
 /* earlier versions kept data privately under the viewer's Claude account: offer to bring it over */
