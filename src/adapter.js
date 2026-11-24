@@ -3,7 +3,7 @@
 import { initializeApp } from 'firebase/app';
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signOut as fbSignOut, deleteUser as fbDeleteUser
+  signOut as fbSignOut, deleteUser as fbDeleteUser, updatePassword as fbUpdatePassword
 } from 'firebase/auth';
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager, memoryLocalCache,
@@ -115,6 +115,7 @@ const db = {
     is: u => !!auth.currentUser && auth.currentUser.email === emailOf(u),
     signUp: (u, p) => createUserWithEmailAndPassword(auth, emailOf(u), p),
     signIn: (u, p) => signInWithEmailAndPassword(auth, emailOf(u), p),
+    setPassword: p => (auth.currentUser ? fbUpdatePassword(auth.currentUser, p) : Promise.reject(new Error('not signed in'))),
     signOut: () => fbSignOut(auth),
     deleteUser: () => (auth.currentUser ? fbDeleteUser(auth.currentUser) : Promise.resolve())
   }

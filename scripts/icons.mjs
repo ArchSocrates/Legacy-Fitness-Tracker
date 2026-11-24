@@ -39,6 +39,11 @@ const px = (N, frac, sky, size, circle) => {
 };
 const mask = (S, round) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">${round ? `<circle cx="${S / 2}" cy="${S / 2}" r="${S / 2}"/>` : `<rect width="${S}" height="${S}" rx="${Math.round(S * 0.22)}"/>`}</svg>`);
 const masked = async (N, frac, S, round) => sharp(await px(N, frac, true, S).png().toBuffer()).composite([{ input: mask(S, round), blend: 'dest-in' }]).png();
+if (res === 'web') { // icons for the iPhone / browser web app
+  fs.mkdirSync('www/icons', { recursive: true });
+  for (const [n, S] of [['icon-192', 192], ['icon-512', 512], ['apple-touch-icon', 180]]) await px(48, 0.78, true, S).png().toFile('www/icons/' + n + '.png');
+  console.log('web icons drawn'); process.exit(0);
+}
 const dens = { mdpi: [48, 108], hdpi: [72, 162], xhdpi: [96, 216], xxhdpi: [144, 324], xxxhdpi: [192, 432] };
 for (const [d, [L, F]] of Object.entries(dens)) {
   const dir = path.join(res, 'mipmap-' + d);

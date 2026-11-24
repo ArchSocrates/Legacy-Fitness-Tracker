@@ -1,9 +1,8 @@
 {
-  "version": "2.4.0",
+  "version": "2.5.0",
   "color": "#000000",
   "notes": [
-    "New I'm in the gym switch: turns on every machine, cable, barbell and more for the day, and workouts lean toward gym exercises",
-    "52 new gym exercises (224 in total), with more for biceps, triceps, calves, glutes, shoulders and gym cardio",
-    "9 new gym workouts: Full Body, Upper, Lower, Machine Circuit, Cable Sculpt, Arms, Strength 5x5, Glutes and Hamstrings, Cardio Mix"
+    "New recovery code: you get one when you create an account. On the sign-in screen tap Forgot username or password and enter it to find your username and set a new password, keeping all your data. Existing accounts can make one in You > Settings",
+    "Legacy now also works on iPhone and iPad as a web app (Safari > Share > Add to Home Screen)"
   ]
 }

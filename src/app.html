@@ -1084,7 +1084,7 @@ async function init(){
       const key=await crypto.subtle.importKey('jwk',r.k,{name:'AES-GCM'},true,['encrypt','decrypt']);
       if(db.auth){await db.auth.ready();if(!db.auth.is(r.u))throw 0}
       const a=await db.doc('accts/'+r.u).get();
-      if(a.exists){try{await open(key,a.data().chk);enter(r.u,key);return}catch(e){}}
+      if(a.exists){try{const q=a.data();await open(key,q.chk2||q.chk);enter(r.u,key);return}catch(e){}}
     }
   }catch(e){}
   authScreen('in');
@@ -1109,7 +1109,7 @@ function authScreen(mode,msg,uval){
   <label class="row" style="margin-top:14px;gap:8px;font-size:14px"><input type="checkbox" id="a_rm" checked style="width:20px;height:20px;min-height:0"> Keep me signed in on this device</label>
   <div id="a_err" style="color:var(--em);font-size:13px;min-height:20px;margin-top:10px">${esc(msg||'')}</div>
   <button class="btn blk" id="a_go">${up?'Create account':'Sign in'}</button>
-  ${up?`<p class="mu xs" style="margin:12px 0 0">No email needed. Your workouts are encrypted with your password, so nobody else can read them. <b>If you forget your password it can't be recovered.</b></p>`:''}</div></div>`;
+  ${up?`<p class="mu xs" style="margin:12px 0 0">No email needed. Your workouts are encrypted with your password, so nobody else can read them. After this you get a <b>recovery code</b>. Save it: it is the only way back in if you forget your password.</p>`:''}</div></div>`;
   $('#am_in').onclick=()=>authScreen('in');$('#am_up').onclick=()=>authScreen('up');
   const go=()=>submitAuth(mode);$('#a_go').onclick=go;
   $$('#a_u,#a_p,#a_p2').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter')go()}));
@@ -1124,9 +1124,9 @@ async function submitAuth(mode){
   const rm=$('#a_rm').checked;btn.disabled=true;btn.textContent='One moment…';
   try{
     const ref=DB.doc('accts/'+u),A=DB.auth;
-    let key,snap=null;
+    let key,snap=null,fp=null;
     if(A){
-      const fp=await deriveFb(u,pw);
+      fp=await deriveFb(u,pw);
       if(up){
         try{await A.signUp(u,fp)}
         catch(e){
@@ -1152,8 +1152,10 @@ async function submitAuth(mode){
       if(!snap.exists)return fail('No account with that username.');
       const a=snap.data();key=await deriveKey(pw,unb64(a.salt),a.it||IT);
       try{await open(key,a.chk)}catch(e){return fail('Wrong password.')}
+      if(a.dk){try{key=await crypto.subtle.importKey('jwk',(await open(key,a.dk)).k,{name:'AES-GCM'},true,['encrypt','decrypt'])}catch(e){return fail('Wrong password.')}}
     }
     if(rm){try{localStorage.setItem('legacy_session',JSON.stringify({u,k:await crypto.subtle.exportKey('jwk',key)}))}catch(e){}}
+    if(up&&fp&&typeof rkCreate==='function'){let rc=null;try{rc=await rkCreate(u,key,fp)}catch(e){console.error('recovery code',e)}if(rc){rkShowScreen(rc,u,()=>enter(u,key));return}}
     enter(u,key);
   }catch(e){console.error(e);fail('Something went wrong. Check your connection and try again.'+(e&&(e.code||e.message)?' ['+String(e.code||e.message).slice(0,90)+']':''))}
 }
@@ -2044,7 +2046,7 @@ function setView(){
   <div class="card" style="margin-top:20px"><div class="row sp"><div><div style="font-weight:700">Learn and tour</div><div class="mu sm">Lessons, plus replay the app tour.</div></div><button class="btn s dark" data-act="tab" data-a="learn">Open</button></div></div>
   <div class="card" style="margin-top:20px"><div class="row sp"><div><div style="font-weight:700">What's new in v2</div><div class="mu sm">Replay the walkthrough of every new feature.</div></div><button class="btn s dark" data-act="wnOpen">Replay</button></div></div>
   ${aboutCard()}
-  <div class="card" style="margin-top:20px"><h3>Account</h3><p class="mu sm">Signed in as <b>@${esc(S.user)}</b>. Your data is encrypted with your password, so only you can read it. A forgotten password can't be recovered.</p>
+  <div class="card" style="margin-top:20px"><h3>Account</h3><p class="mu sm">Signed in as <b>@${esc(S.user)}</b>. Your data is encrypted with your password, so only you can read it.</p>${typeof rkRow==='function'?rkRow():''}
   <div class="row wrap"><button class="btn dark s" data-act="signout">Sign out</button><button class="btn ghost s" data-act="export">Copy my data</button><button class="btn red s" data-act="wipeAsk">Delete all my data</button></div></div>`;
 }
 
@@ -2425,7 +2427,7 @@ const A={
  async wipe(){
   const u=S.user,ids=['profile','weights','meas',...(S.photos||[]).map(p=>'ph_'+p.id),...Object.keys(S.logs).map(m=>'log_'+m)];
   S.modal=null;
-  try{await Promise.all(ids.map(i=>col.doc(u+':'+i).delete()));try{if(DB.auth&&DB.auth.uid())await DB.collection('board').doc(DB.auth.uid()).delete()}catch(e){}await DB.doc('accts/'+u).delete();if(DB.auth){try{await DB.auth.deleteUser()}catch(e){}}}catch(e){toast('Could not delete everything');return}
+  try{await Promise.all(ids.map(i=>col.doc(u+':'+i).delete()));try{if(DB.auth&&DB.auth.uid())await DB.collection('board').doc(DB.auth.uid()).delete()}catch(e){}try{const a0=await DB.doc('accts/'+u).get();if(a0.exists&&a0.data().rid)await DB.doc('recov/'+a0.data().rid).delete()}catch(e){}await DB.doc('accts/'+u).delete();if(DB.auth){try{await DB.auth.deleteUser()}catch(e){}}}catch(e){toast('Could not delete everything');return}
   try{localStorage.removeItem(ACT_KEY())}catch(e){}
   signOut();
  },
@@ -2655,7 +2657,7 @@ function whatsNewModal(){
   return`<div class="modal" data-act="mclose"><div><div class="lbl">What's new</div><h2 style="margin:4px 0 8px">Legacy v${esc(VER)}</h2>${NOTES.length?`<ul style="margin:0 0 14px;padding-left:18px">${NOTES.map(n=>`<li class="sm" style="margin:4px 0">${esc(n)}</li>`).join('')}</ul>`:'<p class="mu sm">Nothing new listed.</p>'}<button class="btn blk" data-act="mclose">Got it</button></div></div>`;
 }
 async function checkUpdate(){
-  const repo=window.LEGACY_REPO;if(!repo||VER==='dev')return;
+  const repo=window.LEGACY_REPO;if(!repo||VER==='dev'||!window.LegacyNative)return;   /* the APK update card is only for the Android app; the web app updates itself */
   try{const r=await fetch('https://api.github.com/repos/'+repo+'/releases/latest');if(!r.ok)return;const j=await r.json();
     if(j&&j.tag_name&&verGt(j.tag_name,VER)){S.update={tag:j.tag_name,url:j.html_url};render()}}catch(e){}
 }
@@ -3581,6 +3583,162 @@ Object.assign(A,{
 {const _f=A.finish;A.finish=function(){const had=S.sess&&S.sess.sets&&S.sess.sets.length;const r=_f.apply(this,arguments);if(had&&!S.sess)chMark('w');return r}}
 {const _hh=homeHub;homeHub=function(){return todayCard()+_hh()}}
 {const _wk=wkView;wkView=function(){const h=_wk();return S.sess?h:h+`<div class="card"><div class="row sp"><div><div style="font-weight:700">Challenges</div><div class="mu sm">${chSt()&&!chSt().fin?esc(CHAL[chSt().id].n)+' · day '+(chSt().done.length+1):'21 to 30 day plans with a workout for every day.'}</div></div><button class="btn s" data-act="tab" data-a="chal">Open</button></div></div>`}}
+
+/* ================= RECOVERY CODE (v2.5) =================
+   Workouts are encrypted with a key made from the password, so a forgotten password cannot be emailed or
+   reset by the server. Instead a random recovery code protects a copy of the data key and the sign-in
+   secret. The copy lives at recov/<hash of code>, readable only by someone who already has the code.
+   The code also names the account, so it finds a forgotten username too. Resetting swaps the password
+   but keeps the same data key, so nothing has to be re-encrypted. */
+const RK_AL='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',RK_IT=100000;
+const rkNorm=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+const rkFmt=c=>c.match(/.{1,5}/g).join('-');
+function rkGen(){const b=crypto.getRandomValues(new Uint8Array(20));let s='';for(const x of b)s+=RK_AL[x&31];return s}
+async function rkId(code){const h=await crypto.subtle.digest('SHA-256',enc.encode('legacy-rec|'+code));return Array.from(new Uint8Array(h)).map(x=>x.toString(16).padStart(2,'0')).join('')}
+const rkImport=jwk=>crypto.subtle.importKey('jwk',jwk,{name:'AES-GCM'},true,['encrypt','decrypt']);
+const rkOk=()=>!!(DB&&DB.auth);
+
+/* make (or replace) the account's recovery code. dataKey = the key that encrypts the workouts. */
+async function rkCreate(u,dataKey,fp){
+  const code=rkGen(),salt=crypto.getRandomValues(new Uint8Array(16)),rk=await deriveKey(code,salt,RK_IT);
+  const jwk=await crypto.subtle.exportKey('jwk',dataKey),id=await rkId(code);
+  const sealed=await seal(rk,{u,k:jwk,fp});
+  await DB.doc('recov/'+id).set(Object.assign({salt:b64(salt),it:RK_IT},sealed));
+  const ref=DB.doc('accts/'+u),a=await ref.get(),old=a.exists?a.data():null;
+  if(old){
+    if(old.rid&&old.rid!==id){try{await DB.doc('recov/'+old.rid).delete()}catch(e){}}
+    await ref.set(Object.assign({},old,{rid:id}));
+  }
+  return rkFmt(code);
+}
+/* find and open a recovery record from what the person typed */
+async function rkOpen(raw){
+  const code=rkNorm(raw);if(code.length!==20)throw new Error('bad');
+  const id=await rkId(code),d=await DB.doc('recov/'+id).get();
+  if(!d.exists)throw new Error('bad');
+  const r=d.data(),rk=await deriveKey(code,unb64(r.salt),r.it||RK_IT),p=await open(rk,{iv:r.iv,ct:r.ct});
+  return{id,r,rk,p};
+}
+
+/* ---- shown once, right after the code is made ---- */
+function rkBody(code,u){
+  const mail='mailto:?subject='+encodeURIComponent('My Legacy recovery code')+'&body='+encodeURIComponent('Legacy username: '+u+'\nRecovery code: '+code+'\n\nThis code can reset my Legacy password and unlock my workouts. Keep this email private.');
+  return`<p class="sm" style="margin:10px 0">Your username is <b>@${esc(u)}</b>. If you ever forget your password or username, this code gets you back in <b>with all your data</b>. It is shown only now.</p>
+  <div id="rk_code" style="font:700 22px/1.3 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;text-align:center;padding:16px 8px;margin:12px 0;border:2px dashed var(--line);border-radius:14px;user-select:all;word-break:break-all">${esc(code)}</div>
+  <div class="row wrap" style="gap:8px"><button class="btn dark s" data-act="rkCopy" data-a="${esc(code)}">Copy</button><a class="btn s" href="${mail}">Email it to myself</a></div>
+  <p class="mu xs" style="margin:12px 0 0">Anyone who has this code can unlock your account, so keep it somewhere private. Making a new code later cancels this one.</p>`;
+}
+function rkShowScreen(code,u,next){
+  $('#app').innerHTML=`<div class="lock" style="justify-content:flex-start;padding-top:40px">${MARK.replace('class="mark"','class="mark" style="width:60px;height:60px"')}
+  <div class="word" style="font-size:52px">LEGACY</div><div class="hero" style="color:var(--au2);font-size:22px">Save your recovery code</div>
+  <div class="card" style="width:100%;text-align:left;max-width:420px">${rkBody(code,u)}<button class="btn blk" id="rk_done" style="margin-top:16px">I saved it, continue</button></div></div>`;
+  $('#rk_done').onclick=next;
+}
+MODALS2.rkshow=m=>sheet('Your recovery code',rkBody(m.code,m.u)+`<button class="btn blk" data-act="mclose" style="margin-top:14px">Done</button>`);
+MODALS2.rkpw=m=>sheet('New recovery code',`<p class="mu sm" style="margin:8px 0">Enter your password to make a new code. Any older code stops working.</p>
+  <label class="f">Password<input type="password" id="rk_pw" autocomplete="current-password"></label>
+  <div id="rk_err" style="color:var(--em);font-size:13px;min-height:20px;margin-top:8px">${esc(m.err||'')}</div>
+  <button class="btn blk" data-act="rkMake">Create code</button>`);
+
+/* ---- forgot username or password ---- */
+function rkForgot(msg,good){
+  $('#app').innerHTML=`<div class="lock" style="justify-content:flex-start;padding-top:40px">${MARK.replace('class="mark"','class="mark" style="width:60px;height:60px"')}
+  <div class="word" style="font-size:52px">LEGACY</div><div class="hero" style="color:var(--au2);font-size:22px">Forgot username or password</div>
+  <div class="card" style="width:100%;text-align:left;max-width:420px">
+  <p class="mu sm" style="margin:0 0 6px">Enter the recovery code you saved when you made your account. It finds your username and lets you pick a new password. Your workouts stay.</p>
+  <label class="f">Recovery code<input type="text" id="rk_c" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="XXXXX-XXXXX-XXXXX-XXXXX"></label>
+  <label class="f">New password (6+ characters)<input type="password" id="rk_p" autocomplete="new-password"></label>
+  <label class="f">Confirm new password<input type="password" id="rk_p2" autocomplete="new-password"></label>
+  <div id="a_err" style="color:var(${good?'--ok':'--em'});font-size:13px;min-height:20px;margin-top:10px">${esc(msg||'')}</div>
+  <button class="btn blk" id="rk_go" data-act="rkReset">Reset password</button>
+  <button class="btn ghost blk" style="margin-top:10px" data-act="rkWho">Just show my username</button>
+  <button class="btn ghost blk" style="margin-top:10px" data-act="rkBack">Back to sign in</button>
+  <p class="mu xs" style="margin:12px 0 0">No code? Without it a forgotten password can't be recovered, because your workouts are encrypted with it.</p></div></div>`;
+}
+const rkErr=(m,good)=>{const e=$('#a_err');if(e){e.style.color='var(--'+(good?'ok':'em')+')';e.textContent=m}};
+const _as=authScreen;
+authScreen=function(mode,msg,uval){
+  if(mode==='forgot')return rkForgot(msg);
+  _as(mode,msg,uval);
+  if(mode!=='up'&&rkOk()){const g=$('#a_go');if(g)g.insertAdjacentHTML('afterend','<button class="btn ghost blk" id="a_forgot" data-act="rkForgot" style="margin-top:10px">Forgot username or password?</button>')}
+};
+const _rs=resetState;resetState=function(){_rs();S._recOn=undefined};
+
+/* is a recovery code set up on this account? (looked up once, shown in Settings and on You) */
+function rkStatus(){
+  if(S._recOn===undefined&&rkOk()&&S.user){
+    S._recOn=null;const u=S.user;
+    DB.doc('accts/'+u).get().then(d=>{if(S.user!==u)return;S._recOn=!!(d.exists&&d.data().rid);if(S.tab==='set'||S.tab==='me')render()}).catch(()=>{S._recOn=undefined})
+  }
+  return S._recOn;
+}
+function rkRow(){
+  if(!rkOk())return'';const on=rkStatus();
+  return`<div class="row sp" style="margin:12px 0"><div><div style="font-weight:700">Recovery code</div><div class="mu sm">${on?'Set up. Resets a forgotten password and keeps your data.':on===false?'Not set up. Without it a forgotten password cannot be recovered.':'Checking…'}</div></div><button class="btn s ${on?'dark':''}" data-act="rkAsk">${on?'New code':'Create'}</button></div>`;
+}
+const _mev2=meView;
+meView=function(){
+  const h=_mev2();
+  if(rkStatus()!==false||localStorage.getItem('legacy_rk_skip_'+S.user))return h;
+  return`<div class="card gold" style="margin-bottom:12px"><div style="font-weight:700">Protect your account</div><div class="mu sm" style="margin:2px 0 10px">Make a recovery code now. If you forget your password or username it is the only way back in with your data.</div><div class="row" style="gap:8px"><button class="btn s" data-act="rkAsk">Create code</button><button class="btn ghost s" data-act="rkSkip">Later</button></div></div>`+h;
+};
+
+Object.assign(A,{
+  rkForgot(){rkForgot()},
+  rkBack(){authScreen('in')},
+  rkCopy(c){try{navigator.clipboard.writeText(c).then(()=>toast('Copied'),()=>toast('Could not copy'))}catch(e){toast('Could not copy')}},
+  rkSkip(){try{localStorage.setItem('legacy_rk_skip_'+S.user,'1')}catch(e){}render()},
+  rkAsk(){S.modal={type:'rkpw'};render()},
+  async rkMake(){
+    const pw=($('#rk_pw')||{}).value||'',fail=m=>{S.modal={type:'rkpw',err:m};render()};
+    if(!pw)return fail('Enter your password.');
+    try{
+      const u=S.user,a=await DB.doc('accts/'+u).get();
+      if(!a.exists)return fail('Account record not found.');
+      const d=a.data(),pk=await deriveKey(pw,unb64(d.salt),d.it||IT);
+      try{await open(pk,d.chk)}catch(e){return fail('Wrong password.')}
+      const code=await rkCreate(u,KEY,await deriveFb(u,pw));
+      S._recOn=true;S.modal={type:'rkshow',code,u};render();
+    }catch(e){console.error(e);fail('Could not save the code. Check your connection. If this keeps happening the database rules need updating. ['+String(e&&(e.code||e.message)||e).slice(0,60)+']')}
+  },
+  async rkWho(){
+    const c=($('#rk_c')||{}).value;rkErr('Looking…',1);
+    try{const o=await rkOpen(c);rkErr('Your username is @'+o.p.u+'. Enter it on the sign-in screen.',1)}
+    catch(e){rkErr('That recovery code is not right.')}
+  },
+  async rkReset(){
+    const c=$('#rk_c').value,pw=$('#rk_p').value,pw2=$('#rk_p2').value,btn=$('#rk_go');
+    if(pw.length<6)return rkErr('Password must be at least 6 characters.');
+    if(pw!==pw2)return rkErr('Passwords do not match.');
+    btn.disabled=true;btn.textContent='One moment…';
+    const back=m=>{rkForgot(m);const e=$('#rk_c');if(e)e.value=c};
+    let o;
+    try{o=await rkOpen(c)}catch(e){return back('That recovery code is not right.')}
+    try{
+      const{u,k,fp}=o.p,AU=DB.auth;
+      try{await AU.signIn(u,fp)}catch(e){return back('This code is out of date. Use the newest recovery code you saved.')}
+      const dataKey=await rkImport(k),ref=DB.doc('accts/'+u),snap=await ref.get(),old=snap.exists?snap.data():{};
+      const salt=crypto.getRandomValues(new Uint8Array(16)),pk=await deriveKey(pw,salt,IT),nfp=await deriveFb(u,pw);
+      /* order matters: if anything stops half way the old code still works and the reset can be run again */
+      await ref.set(Object.assign({},old,{salt:b64(salt),it:IT,chk:await seal(pk,{ok:'legacy'}),dk:await seal(pk,{k}),chk2:await seal(dataKey,{ok:'legacy'}),rid:o.id}));
+      await AU.setPassword(nfp);
+      await DB.doc('recov/'+o.id).set(Object.assign({salt:o.r.salt,it:o.r.it},await seal(o.rk,{u,k,fp:nfp})));
+      try{localStorage.setItem('legacy_session',JSON.stringify({u,k:await crypto.subtle.exportKey('jwk',dataKey)}))}catch(e){}
+      enter(u,dataKey);setTimeout(()=>toast('Password changed. Your username is @'+u),900);
+    }catch(e){console.error(e);back('Could not reset. Check your connection and try again. ['+String(e&&(e.code||e.message)||e).slice(0,60)+']')}
+  }
+});
+
+/* ---- iPhone / iPad: show how to put the web app on the Home Screen ---- */
+const isIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isStandalone=()=>!!(window.navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));
+const _uc=updCard;
+updCard=function(){
+  const h=_uc();
+  if(!isIOS()||isStandalone()||window.LegacyNative||lsGet('legacy_ios_hint')==='1')return h;
+  return h+`<div class="card gold"><div style="font-weight:700">Add Legacy to your Home Screen</div><div class="mu sm" style="margin:2px 0 10px">In Safari tap the Share button, then <b>Add to Home Screen</b>. It opens full screen like a normal app. Open it from the Home Screen icon and sign in there.</div><button class="btn ghost s" data-act="iosHide">Got it</button></div>`;
+};
+A.iosHide=function(){lsSet('legacy_ios_hint','1');render()};
 
 Object.assign(A,{
  lookSet(k,v){LOOK[k]=(k==='px')?+v:v;saveLook();applySky(true);render();dtPaintAll()},
