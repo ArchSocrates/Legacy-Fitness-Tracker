@@ -1,15 +1,15 @@
-// Draws the Legacy mountain mark on a background colour that changes with each version (version.json).
+// Draws the Legacy mountain mark in black and white only (two-tone dither).
 import sharp from 'sharp';
 import fs from 'node:fs';
 import path from 'node:path';
-const { color } = JSON.parse(fs.readFileSync('version.json', 'utf8'));
+const color = '#000000';
 const res = process.argv[2] || 'android/app/src/main/res';
 const OUT = process.argv[3] === 'preview';
 // Dithered pixel mountain, drawn on a small grid and scaled up with hard edges.
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const mixc = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 const BAY = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]].map(r => r.map(v => (v + 0.5) / 16));
-const bg = hex(color), cream = hex('#f7f1e3');
+const bg = hex(color), cream = hex('#ffffff');
 const PTS = [[2, 26], [11, 8], [16.5, 17], [21, 10], [30, 26]];
 const inPoly = (x, y) => { let c = false; for (let i = 0, j = PTS.length - 1; i < PTS.length; j = i++) { const [xi, yi] = PTS[i], [xj, yj] = PTS[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
 // returns raw RGBA of an N x N grid; sky=false leaves outside transparent
@@ -22,12 +22,10 @@ function grid(N, frac, sky, mt = true) {
     if (mt && inPoly(u, v)) {
       const top = Math.min(1, Math.max(0, (v - 8) / 18)), side = u < 16.5 ? 0.18 : -0.1; // left faces the light
       const t = 1 - top * 0.85 + side;               // brighter near the peaks
-      const lv = [dark, mid, light, cream], p = Math.min(0.9999, Math.max(0, t)) * 3, j = Math.floor(p);
-      c = lv[j + (p - j > th ? 1 : 0)];
+      c = Math.min(0.9999, Math.max(0, t)) > th ? cream : bg; // two tones only: white dots on black
       if (!inPoly(u, v - 1.4)) c = cream; // bright rim along the top edge
     } else if (sky) {
-      const g = y / N, t = Math.min(0.9999, g * 1.1) * 2, j = Math.floor(t), sk = [mixc(bg, [0, 0, 0], 0.25), bg, mixc(bg, cream, 0.22)];
-      c = sk[j + (t - j > th ? 1 : 0)];
+      c = bg;
       const sx = (N * 0.74), sy = (N * 0.24), d = Math.hypot(x - sx, y - sy); if (d < N * 0.07) c = cream; // sun
     }
     if (c) { buf[i] = c[0]; buf[i + 1] = c[1]; buf[i + 2] = c[2]; buf[i + 3] = 255; }

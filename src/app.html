@@ -274,6 +274,10 @@ h2,#app>.xs.mu,#app>.sm.mu,.pane>.xs.mu,.pane>.sm.mu,#app>.mu,.pane>.mu,#app>.he
 .cd,.lvl,.seg,.chip,input[type=text],input[type=number],input[type=date],input[type=password],select,.stepper button{border-radius:10px!important}
 .cd,.lvl{border:1px solid var(--gline)}
 .gear{color:var(--tx)}
+/* controls that can sit straight on the artwork get their own frosted fill */
+.chip,.seg,input[type=text],input[type=number],input[type=date],input[type=password],select,textarea{background-color:var(--glass2)!important;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.chip.on,.seg button.on{background-color:var(--acc)!important;color:var(--acc-t)!important}
+.leg{background:var(--glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid var(--gline);border-radius:12px;padding:10px 12px;width:fit-content;max-width:100%}
 </style>
 </head>
 <body>
@@ -584,16 +588,18 @@ const retint=(hex,hue,sm)=>{const[,s,l]=rgb2hsl(h2r(hex));return hsl2hex(hue,cla
 const rgba=(hex,a)=>{const c=h2r(hex);return'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'};
 /* four colours: background, highlight (also the text), main tone (also buttons), rim light */
 const PRESETS=[
- ['Neon','#100720','#d8f6ff','#ff2e6e','#18d6e8'],['Toxic','#07140d','#eaffdf','#3dff8a','#ff3fd2'],['Sunset','#170914','#ffe9c7','#ff7a2e','#b44dff'],
- ['Abyss','#040f1c','#dff6ff','#2a8cff','#ffd23f'],['Blood','#0c0606','#ffe6e0','#e3263b','#ff9a3d'],['Mono','#050505','#f4f4f4','#8f8f8f','#d0d0d0'],
- ['Paper','#f1ece0','#141414','#e0452b','#1f7fd1'],['Riso','#f6efe6','#1d2a6b','#ff4f7b','#00a38a']
+ ['Mono','#0a0a0a','#f5f5f5','#d6d6d6','#7a7a7a'],['Paper','#f4f4f2','#0a0a0a','#2b2b2b','#9a9a9a'],['Neon','#100720','#d8f6ff','#ff2e6e','#18d6e8'],['Toxic','#07140d','#eaffdf','#3dff8a','#ff3fd2'],['Sunset','#170914','#ffe9c7','#ff7a2e','#b44dff'],
+ ['Abyss','#040f1c','#dff6ff','#2a8cff','#ffd23f'],['Blood','#0c0606','#ffe6e0','#e3263b','#ff9a3d'],
+ ['Cream','#f1ece0','#141414','#e0452b','#1f7fd1'],['Riso','#f6efe6','#1d2a6b','#ff4f7b','#00a38a']
 ];
-const LOOK_DEF={bg:'#100720',ink:'#d8f6ff',acc:'#ff2e6e',acc2:'#18d6e8',dith:'stipple',px:4,mot:'auto',tmr:'auto',v:4};
+// defaults: black and white, stippled, normal pixels, calm animation (smooth and light on battery)
+const LOOK_DEF={bg:'#0a0a0a',ink:'#f5f5f5',acc:'#d6d6d6',acc2:'#7a7a7a',dith:'stipple',px:4,mot:'calm',tmr:'auto',v:5};
 const isHex=c=>typeof c==='string'&&/^#[0-9a-f]{6}$/i.test(c);
 function normLook(j){
   const o=Object.assign({},LOOK_DEF);if(!j||typeof j!=='object')return o;
+  if(j.v!==5)return o; // settings from before this version start fresh on the new defaults
   ['mot','tmr'].forEach(k=>{if(typeof j[k]==='string')o[k]=j[k]});if([3,4,6].includes(+j.px))o.px=+j.px;
-  if(j.v===4){['bg','ink','acc','acc2'].forEach(k=>{if(isHex(j[k]))o[k]=j[k].toLowerCase()});if(typeof j.dith==='string')o.dith=j.dith}
+  {['bg','ink','acc','acc2'].forEach(k=>{if(isHex(j[k]))o[k]=j[k].toLowerCase()});if(typeof j.dith==='string')o.dith=j.dith}
   return o; // older looks move to the new stippled style
 }
 let LOOK=Object.assign({},LOOK_DEF);
@@ -1707,7 +1713,7 @@ function render(){
   S._pk=wide?[S.tab,t2]:null;
   paintTimer();gdPaint();if(S.tour)tourPos();if(S.P)updatePreview();
 }
-function header(){const back=S.profile&&S.tab!=='home'?'<button class="bk" data-act="back" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>':'';return`<div class="top"><div class="l">${back}<div class="brand">${MARK}<b>LEGACY</b></div></div><div class="hr">${S.profile&&window.innerWidth>=840&&lsGet('legacy_two')==='off'?'<button class="tb" data-act="twoToggle">Two panes</button>':''}${S.profile?'<button class="tb" data-act="tourMenu">Tour</button>':''}<div class="sync ${S.sync}" id="sync"><i></i><span>${S.sync==='saving'?'Saving…':S.sync==='error'?'Not saved':'Saved'}</span></div></div></div>`}
+function header(){const back=S.profile&&S.tab!=='home'?'<button class="bk" data-act="back" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>':'';return`<div class="top"><div class="l">${back}<div class="brand">${MARK}<b>LEGACY</b></div></div><div class="hr">${S.profile&&window.innerWidth>=840&&lsGet('legacy_two')==='off'?'<button class="tb" data-act="twoToggle">Two panes</button>':''}<div class="sync ${S.sync}" id="sync"><i></i><span>${S.sync==='saving'?'Saving…':S.sync==='error'?'Not saved':'Saved'}</span></div>${S.profile?'<button class="tb" data-act="tourMenu">Tour</button>':''}</div></div>`}
 function navHtml(){
   const t=[['home','Home','home'],['cal','Calendar','cal'],['lib','Exercises','lib'],['wk','Workout','wk'],['tm','Timer','tm'],['pr','Progress','pr'],['me','You','me']];
   return`<nav class="nav"><div>${t.map(([k,l,i])=>`<button class="${S.tab===k||(k==='me'&&S.tab==='set')?'on':''}" data-act="tab" data-a="${k}">${ico(i)}<span>${l}${k==='wk'&&S.sess?' •':''}</span></button>`).join('')}</div></nav>`;

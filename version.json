@@ -1,9 +1,9 @@
 {
-  "version": "2.0.8",
-  "color": "#18d6e8",
+  "version": "2.0.9",
+  "color": "#000000",
   "notes": [
-    "Frosted glass boxes over the artwork",
-    "Fixed: Home no longer gets wider than a phone screen and shifts the layout",
-    "Fixed: stray squares after screenshots or multi-finger taps"
+    "New default look: black and white, stippled, with calm animation that is smooth and easy on battery",
+    "Black and white app icon",
+    "Search boxes, chips and buttons stay readable over the artwork, and the header lines up with the boxes"
   ]
 }
