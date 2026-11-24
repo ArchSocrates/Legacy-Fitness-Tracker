@@ -1,9 +1,8 @@
 {
-  "version": "2.3.0",
+  "version": "2.3.1",
   "color": "#000000",
   "notes": [
-    "Challenges: 21-Day Kickstart, 21-Day Fat Burn, 28-Day Core and 30-Day Strength, with a workout built for each day and a day-by-day grid",
-    "Daily goal ring on Home: minutes trained today from workouts and activities. Tap it to change your goal",
-    "Quick workouts: pick 5 to 30 minutes and a focus, and Legacy coaches you through it"
+    "Fixed: the guided workout screen was see-through, with the page, header and tab bar showing on top of it",
+    "Guided workout controls are now round, with a clean progress bar and a clearer get-ready countdown"
   ]
 }

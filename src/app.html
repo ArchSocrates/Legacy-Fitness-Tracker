@@ -284,7 +284,9 @@ h2,#app>.xs.mu,#app>.sm.mu,.pane>.xs.mu,.pane>.sm.mu,#app>.mu,.pane>.mu,#app>.he
 html{-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 body,#app,button,input,select,textarea{font-family:var(--ui)}
 h1,h2,h3,.disp,.hero,.quote,.btn,.chip,.seg button,nav.nav button,.tb,.gear,.setrow b,#tr-tip h3,.rrow .n,.pal,.lbl,.les b{font-family:var(--ui)!important;text-transform:none}
-.big,.stepper .v,.tbar .t,.gbig,.dt-time,.ring text,.tiles .big{font-family:var(--num)!important}
+.big,.stepper .v,.tbar .t,.dt-time,.ring text,.tiles .big{font-family:var(--num)!important}
+.gbig{font-family:var(--ui)!important;font-weight:800!important;letter-spacing:-.02em!important;line-height:1.1!important}
+.gd{background:var(--scrim2)!important;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 .brand b,.lock .word{font-family:'Pixelify Sans',var(--ui)!important}
 /* the artwork stays, softened behind content so text always reads */
 #sky::after{content:'';position:absolute;top:0;right:0;bottom:0;left:0;background:var(--scrim);pointer-events:none}
@@ -381,6 +383,16 @@ h2,.vw>.mu,.vw>.hero,.vw>.quote,.leg{width:-webkit-fit-content;width:fit-content
 #toast{border-radius:99px!important;border:1px solid var(--gline)!important;font-family:var(--ui)!important;font-weight:600;background:var(--glass2)!important;color:var(--tx)!important;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 10px 30px rgba(0,0,0,.35);transition:opacity .25s,transform .4s var(--ease)!important;transform:translate(-50%,10px)!important;max-width:calc(100vw - 40px);text-align:center}
 #toast.on{transform:translate(-50%,0)!important}
 .today .btn{white-space:nowrap}
+
+/* guided workout: iOS-style controls */
+.gctl button,.gctl .rd,.gctl .pp{border-radius:50%!important;box-shadow:none!important;border:1px solid var(--gline)!important;transition:transform .3s var(--ease)!important}
+.gctl .rd{width:58px;height:58px;background:var(--glass2)!important;color:var(--tx)!important;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.gctl .pp{width:80px;height:80px;background:var(--acc)!important;color:var(--acc-t)!important;border-color:transparent!important;box-shadow:0 8px 24px rgba(0,0,0,.35)!important}
+.gctl button:active{transform:scale(.92)!important}
+.tag,.ph,.pth span{border-radius:99px!important;border:0!important;background:var(--fill)!important;color:var(--tx)!important;font-family:var(--ui)!important;font-weight:600}
+.rbar,.rbar i,.bmi-bar{border-radius:99px!important}.rbar{background:var(--fill)!important;background-image:none!important}.rbar i{background:var(--acc)!important}
+.stepper button{border-radius:50%!important;box-shadow:none!important;border:1px solid var(--gline)!important;background:var(--glass2)!important}
+.gd .x,.gd .yt{border-radius:99px!important}
 </style>
 </head>
 <body>
@@ -728,7 +740,7 @@ function themeVars(th){
   const accT=contrast(acc,base)>=2.6?acc:mix(acc,tx,.45);
   const v={'--acc2':th.acc2,'--sky1':bg,'--sky2':bg,'--m1':tx,'--m2':tx,'--m3':tx,'--orb':acc,
    '--tx':tx,'--mu':mu,'--line':rgba(tx,.26),'--track':rgba(tx,.16),'--ink':tx,'--bd':tx,'--shd':shd,
-   '--seal':accT,'--panel':base,'--panel-s':base,'--field':rgba(tx,L?.06:.07),'--field2':rgba(tx,L?.12:.14),'--glass':rgba(base,L?.62:.5),'--glass-solid':rgba(base,L?.92:.88),'--glass2-solid':rgba(base,L?.96:.93),'--scrim':rgba(bg,L?.5:.42),'--fill':rgba(tx,L?.08:.12),'--elev':L?'#ffffff':mix(bg,tx,.22),'--glass2':rgba(base,L?.78:.7),'--gline':rgba(tx,L?.16:.2),'--ghi':L?'rgba(255,255,255,.55)':'rgba(255,255,255,.12)',
+   '--seal':accT,'--panel':base,'--panel-s':base,'--field':rgba(tx,L?.06:.07),'--field2':rgba(tx,L?.12:.14),'--glass':rgba(base,L?.62:.5),'--glass-solid':rgba(base,L?.92:.88),'--glass2-solid':rgba(base,L?.96:.93),'--scrim':rgba(bg,L?.5:.42),'--scrim2':rgba(bg,L?.72:.62),'--fill':rgba(tx,L?.08:.12),'--elev':L?'#ffffff':mix(bg,tx,.22),'--glass2':rgba(base,L?.78:.7),'--gline':rgba(tx,L?.16:.2),'--ghi':L?'rgba(255,255,255,.55)':'rgba(255,255,255,.12)',
    '--acc':accT,'--acc-t':lumOf(accT)>.38?'#121212':'#ffffff','--ok':ok,'--bad':bad,
    '--d50':tileUri(rgba(shd,.5),'50'),'--d25':tileUri(rgba(shd,.4),'25'),
    '--bw':LOOK.px>=6?'3px':'2px','--sh':LOOK.px>=6?'5px':LOOK.px<=3?'3px':'4px'};
@@ -863,7 +875,7 @@ function wipeFx(){
 const DT_N=64;
 function dtStyle(tone){
   if(LOOK.tmr&&LOOK.tmr!=='auto')return LOOK.tmr;
-  return tone==='rest'?'moon':tone==='work'?'tide':tone==='prep'?'dissolve':'ring';
+  return tone==='rest'?'moon':tone==='work'?'tide':'ring'; // the dissolve digit fought with the clock text, so get-ready uses the ring
 }
 let _dtGlyph={};
 function glyph(txt,N){
@@ -1844,6 +1856,7 @@ function render(){
   if(wide){t2=pane2Tab();v=`<div class="split"><div class="pane" data-pane="0">${v}</div><div class="pane" data-pane="1">${paneBar(t2)}${viewOf(t2)}</div></div>`}
   const pTop=[...document.querySelectorAll('.pane')].map(e=>e.scrollTop),pk=S._pk||[];
   const shEl=document.querySelector('.sheet-in'),shTop=shEl?shEl.scrollTop:0;
+  if(S.gd){document.body.classList.remove('wide');app.innerHTML=gdHtml()+modalHtml()+(typeof wnHtml==='function'?wnHtml():'');gdPaint();return}
   app.innerHTML=header()+`<div class="vw${_tabChanged&&motionOn()?' in':''}">${v}</div>`+timerBar()+navHtml()+modalHtml()+gdHtml()+tourHtml()+(typeof wnHtml==='function'?wnHtml():'');
   if(shTop){const n=document.querySelector('.sheet-in');if(n)n.scrollTop=shTop}
   if(wide){document.querySelectorAll('.pane').forEach((e,i)=>{if(pk[i]===(i?t2:S.tab)&&pTop[i])e.scrollTop=pTop[i]})}
