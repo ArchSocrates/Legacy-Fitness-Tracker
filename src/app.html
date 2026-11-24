@@ -132,7 +132,7 @@ nav.nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.
 .rnote.warn{background:var(--bad-14)}
 .tag.warn{background:var(--bad-16);color:var(--bad)}
 .ckA{display:flex;flex-wrap:wrap;gap:8px}.ckI{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--field)}
-.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:12px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:12px}
 .cal b{font-size:11px;text-align:center;color:var(--mu);font-weight:600;padding:4px 0}
 .cd{aspect-ratio:1/1.05;background:var(--field);border:1.5px solid transparent;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--tx);font-size:14px;font-weight:600;padding:0;position:relative}
 .cd em{display:flex;gap:3px;min-height:7px;font-style:normal}.cd u{width:6px;height:6px;border-radius:50%;display:block;box-sizing:border-box}
@@ -257,6 +257,23 @@ input[type=color]{border:var(--bw) solid var(--bd,var(--tx));background:var(--fi
 @media(max-width:360px){h2{font-size:25px}.big{font-size:36px}.btn{padding:10px 14px}.tiles{gap:8px}.tiles .big{font-size:30px}.card{padding:14px}}
 @media(max-width:340px){.pals{grid-template-columns:repeat(3,1fr)}.two{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){html:not([data-mot=on]) *{animation:none!important;transition:none!important}}
+
+/* ---- glass boxes: frosted panels over the stippled art ---- */
+html,body{overflow-x:hidden;max-width:100%}
+.card,.ex,.tile,.tpl,.tbar>div,.les,.spl,#tr-tip,.gear{background:var(--glass)!important;-webkit-backdrop-filter:blur(14px) saturate(160%)!important;backdrop-filter:blur(14px) saturate(160%)!important;border:1px solid var(--gline)!important;box-shadow:inset 0 1px 0 var(--ghi),0 10px 28px rgba(0,0,0,.28)!important;border-radius:18px!important;overflow:hidden}
+.card::after,.ex::after,.tile::after{display:none!important}
+.card.gold::before{border-radius:18px}
+.card.gold{background:linear-gradient(135deg,var(--acc-14),transparent 60%),var(--glass)!important}
+.modal>div{background:var(--glass2)!important;-webkit-backdrop-filter:blur(22px) saturate(160%);backdrop-filter:blur(22px) saturate(160%);border:1px solid var(--gline)!important;box-shadow:inset 0 1px 0 var(--ghi),0 -10px 30px rgba(0,0,0,.3)!important;border-radius:22px 22px 0 0!important}
+nav.nav,.top{background:var(--glass2)!important;-webkit-backdrop-filter:blur(20px) saturate(160%)!important;backdrop-filter:blur(20px) saturate(160%)!important}
+nav.nav{border-top:1px solid var(--gline)!important}
+.top{border-bottom:1px solid var(--gline)}
+.top{margin:0 -16px!important;padding:12px 16px 8px!important;gap:10px}.top .hr{display:flex;align-items:center;gap:10px;flex:none}.top .l{min-width:0}
+@media(max-width:440px){.brand b{letter-spacing:.12em!important}.sync span{display:none}}
+h2,#app>.xs.mu,#app>.sm.mu,.pane>.xs.mu,.pane>.sm.mu,#app>.mu,.pane>.mu,#app>.hero,.pane>.hero,#app>.quote,.pane>.quote,.lock .word,.lock>.mu,.lock>.hero,.lock .quote,.lock>p{background:var(--glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:10px}
+.cd,.lvl,.seg,.chip,input[type=text],input[type=number],input[type=date],input[type=password],select,.stepper button{border-radius:10px!important}
+.cd,.lvl{border:1px solid var(--gline)}
+.gear{color:var(--tx)}
 </style>
 </head>
 <body>
@@ -602,7 +619,7 @@ function themeVars(th){
   const accT=contrast(acc,base)>=2.6?acc:mix(acc,tx,.45);
   const v={'--acc2':th.acc2,'--sky1':bg,'--sky2':bg,'--m1':tx,'--m2':tx,'--m3':tx,'--orb':acc,
    '--tx':tx,'--mu':mu,'--line':rgba(tx,.26),'--track':rgba(tx,.16),'--ink':tx,'--bd':tx,'--shd':shd,
-   '--seal':accT,'--panel':base,'--panel-s':base,'--field':field,'--field2':field2,
+   '--seal':accT,'--panel':base,'--panel-s':base,'--field':rgba(tx,L?.06:.07),'--field2':rgba(tx,L?.12:.14),'--glass':rgba(base,L?.58:.46),'--glass2':rgba(base,L?.78:.7),'--gline':rgba(tx,L?.16:.2),'--ghi':L?'rgba(255,255,255,.55)':'rgba(255,255,255,.12)',
    '--acc':accT,'--acc-t':lumOf(accT)>.38?'#121212':'#ffffff','--ok':ok,'--bad':bad,
    '--d50':tileUri(rgba(shd,.5),'50'),'--d25':tileUri(rgba(shd,.4),'25'),
    '--bw':LOOK.px>=6?'3px':'2px','--sh':LOOK.px>=6?'5px':LOOK.px<=3?'3px':'4px'};
@@ -691,7 +708,9 @@ function applySky(force){
 function fitMtn(){clearTimeout(fitMtn._t);fitMtn._t=setTimeout(()=>applySky(true),120)}
 window.addEventListener('resize',fitMtn);
 /* ---- button ripples and tab wipes ---- */
+let _ptrs=0;document.addEventListener('pointerup',()=>{_ptrs=Math.max(0,_ptrs-1)},{passive:true});document.addEventListener('pointercancel',()=>{_ptrs=0;const f=$('#fx');if(f)f.innerHTML=''},{passive:true});
 document.addEventListener('pointerdown',e=>{
+  if(e.isPrimary)_ptrs=1;else _ptrs++;if(_ptrs>1||!e.isPrimary){const f=$('#fx');if(f)f.innerHTML='';return}
   if(!motionOn())return;
   const b=e.target.closest&&e.target.closest('.btn,.chip,.tb,.seg button,nav.nav button,.cd,.lvl,.stepper button,.bk,.x,.les>button');
   if(!b||b.disabled)return;

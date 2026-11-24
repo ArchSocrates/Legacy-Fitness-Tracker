@@ -1,9 +1,9 @@
 {
-  "version": "2.0.7",
-  "color": "#ff2e6e",
+  "version": "2.0.8",
+  "color": "#18d6e8",
   "notes": [
-    "New stippled art style: a slowly lit kettlebell in drifting stipple clouds replaces the mountain",
-    "Four colours you can change in Settings: background, highlight, main tone and rim light, with 8 presets",
-    "New Stipple dither style (the default)"
+    "Frosted glass boxes over the artwork",
+    "Fixed: Home no longer gets wider than a phone screen and shifts the layout",
+    "Fixed: stray squares after screenshots or multi-finger taps"
   ]
 }
