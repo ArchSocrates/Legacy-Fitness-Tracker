@@ -360,6 +360,27 @@ h2,.vw>.mu,.vw>.hero,.vw>.quote,.leg{width:-webkit-fit-content;width:fit-content
 .mbar i{display:block;height:100%}
 .bfbar i{display:block;height:100%;background:var(--acc)}
 .bfbar b{position:absolute;top:-3px;width:4px;height:16px;border-radius:2px;background:var(--tx);box-shadow:0 0 0 2px var(--bg);transform:translateX(-50%)}
+
+/* today ring, challenges, quick workouts */
+.ring-b{background:none;border:0;padding:0;flex:none;color:var(--tx)}
+.gring .gr-t{font:800 26px var(--num);fill:var(--tx)}.gring .gr-s{font:600 10px var(--ui);fill:var(--mu)}
+.ch-day{font-weight:800;font-size:26px;letter-spacing:-.02em;margin:2px 0}
+.ch-bar{height:8px;border-radius:99px;background:var(--fill);overflow:hidden;margin-top:10px}.ch-bar i{display:block;height:100%;background:var(--acc);border-radius:99px;transition:width .8s var(--ease)}
+.ch-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:14px}
+.ch-c{aspect-ratio:1;border-radius:10px;background:var(--fill);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--mu);min-height:34px}
+.ch-c.ok{background:var(--acc);color:var(--acc-t)}.ch-c.ok b{font-size:11px;line-height:1}
+.ch-c.nx{box-shadow:0 0 0 2px var(--acc) inset;color:var(--tx)}
+.ch-c em{font-style:normal;font-size:9px;opacity:.8}
+.pill{font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--fill);color:var(--tx)}
+.qt{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:12px}
+.qtb{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0;border-radius:14px;border:1px solid var(--gline);background:var(--fill);color:var(--tx);transition:transform .3s var(--ease),background-color .2s}
+.qtb b{font:800 22px var(--num)}.qtb span{font-size:11px;color:var(--mu);font-weight:600}
+.qtb.on{background:var(--acc);color:var(--acc-t);border-color:transparent}.qtb.on span{color:var(--acc-t);opacity:.8}
+.qtb:active{transform:scale(.94)}
+
+#toast{border-radius:99px!important;border:1px solid var(--gline)!important;font-family:var(--ui)!important;font-weight:600;background:var(--glass2)!important;color:var(--tx)!important;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 10px 30px rgba(0,0,0,.35);transition:opacity .25s,transform .4s var(--ease)!important;transform:translate(-50%,10px)!important;max-width:calc(100vw - 40px);text-align:center}
+#toast.on{transform:translate(-50%,0)!important}
+.today .btn{white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1832,7 +1853,7 @@ function render(){
 function header(){const back=S.profile&&S.tab!=='home'?'<button class="bk" data-act="back" aria-label="Back">'+pix('back')+'</button>':'';return`<div class="top"><div class="l">${back}<div class="brand">${MARK}<b>LEGACY</b></div></div><div class="hr">${S.profile&&window.innerWidth>=840&&lsGet('legacy_two')==='off'?'<button class="tb" data-act="twoToggle">Two panes</button>':''}<div class="sync ${S.sync}" id="sync"><i></i><span>${S.sync==='saving'?'Saving…':S.sync==='error'?'Not saved':'Saved'}</span></div>${S.profile?'<button class="tb" data-act="tourMenu">Tour</button>':''}</div></div>`}
 function navHtml(){
   const t=[['home','Home','home'],['cal','Calendar','cal'],['lib','Exercises','lib'],['wk','Workout','wk'],['tm','Timer','tm'],['pr','Progress','pr'],['me','You','me']];
-  return`<nav class="nav"><div>${t.map(([k,l,i])=>`<button class="${S.tab===k||(k==='me'&&(S.tab==='set'||S.tab==='calc'))?'on':''}" data-act="tab" data-a="${k}">${ico(i)}<span>${l}${k==='wk'&&S.sess?' •':''}</span></button>`).join('')}</div></nav>`;
+  return`<nav class="nav"><div>${t.map(([k,l,i])=>`<button class="${S.tab===k||(k==='me'&&(S.tab==='set'||S.tab==='calc'))||(k==='wk'&&S.tab==='chal')?'on':''}" data-act="tab" data-a="${k}">${ico(i)}<span>${l}${k==='wk'&&S.sess?' •':''}</span></button>`).join('')}</div></nav>`;
 }
 function timerBar(){
   if(!T||S.tab==='tm')return'';
@@ -3344,6 +3365,132 @@ const CALC_CARD=()=>`<div class="card"><div class="row sp"><div><div style="font
 /* entry points: You and Progress > Body */
 {const _m=meView;meView=function(){const h=_m();const i=h.indexOf('<div class="card" style="padding:12px 14px">');return h+CALC_CARD()}}
 {const _b=bodyView;bodyView=function(){return CALC_CARD()+_b()}}
+
+/* ================= CHALLENGES, DAILY GOAL RING, QUICK WORKOUTS (v2.3) =================
+   A challenge is a fixed list of days. Finishing any workout on a new calendar day completes the next
+   day; rest days are ticked off by hand. Days are counted, not dated, so a missed day never resets it.
+   Each day's workout is built by the same engine as "Make a workout for me" (equipment, level, soreness). */
+const W_=(f,t,g)=>({f,t,g}),R_={r:1};
+const CHAL={
+ kick:{n:'21-Day Kickstart',d:'Short full-body sessions to build the habit. Great if you are new or coming back.',lvl:'Beginner',
+  days:[W_('full',15,'endure'),W_('core',10,'endure'),W_('lower',15,'muscle'),R_,W_('upper',15,'muscle'),W_('cond',12,'burn'),R_,
+        W_('full',18,'endure'),W_('core',12,'endure'),W_('lower',18,'muscle'),R_,W_('upper',18,'muscle'),W_('cond',15,'burn'),R_,
+        W_('full',20,'muscle'),W_('core',12,'endure'),W_('lower',20,'muscle'),R_,W_('upper',20,'muscle'),W_('cond',18,'burn'),W_('full',25,'muscle')]},
+ burn:{n:'21-Day Fat Burn',d:'Fast circuits with short rests to raise your heart rate and burn more each day.',lvl:'All levels',
+  days:[W_('cond',15,'burn'),W_('full',20,'burn'),W_('core',12,'burn'),W_('cond',18,'burn'),R_,W_('lower',20,'burn'),W_('upper',20,'burn'),
+        W_('cond',20,'burn'),W_('full',22,'burn'),R_,W_('core',15,'burn'),W_('cond',20,'burn'),W_('lower',22,'burn'),R_,
+        W_('upper',22,'burn'),W_('cond',22,'burn'),W_('full',25,'burn'),R_,W_('core',15,'burn'),W_('cond',25,'burn'),W_('full',30,'burn')]},
+ core:{n:'28-Day Core',d:'Ten to fifteen minutes a day for a stronger, more stable middle.',lvl:'All levels',
+  days:Array.from({length:28},(_,i)=>i%4===3?R_:W_('core',10+Math.floor(i/7)*2,'endure'))},
+ str:{n:'30-Day Strength',d:'Upper, lower, push and pull days with heavier sets and longer rests.',lvl:'Intermediate',
+  days:Array.from({length:30},(_,i)=>{const c=[W_('upper',35,'strength'),W_('lower',35,'strength'),R_,W_('push',30,'muscle'),W_('pull',30,'muscle'),W_('lower',30,'muscle'),R_][i%7];return c.r?c:W_(c.f,c.t+Math.floor(i/10)*5,c.g)})}
+};
+const chSt=()=>S.profile&&S.profile.ch&&CHAL[S.profile.ch.id]?S.profile.ch:null;
+const chDay=c=>CHAL[c.id].days[Math.min(c.done.length,CHAL[c.id].days.length-1)];
+const chFocusName=f=>(MK_FOCUS[f]||['Workout'])[0];
+const chDesc=d=>d.r?'Rest or a light walk':`${chFocusName(d.f)} · ${d.t} min · ${(MK_GOAL[d.g]||{n:''}).n}`;
+function chSave(c){setProf('ch',c)}
+function chMark(kind){
+  const c=chSt();if(!c||c.fin)return false;const t=today();
+  if(c.done.some(x=>x.d===t))return false; // one challenge day per calendar day
+  c.done.push({d:t,k:kind});const N=CHAL[c.id].days.length;
+  if(c.done.length>=N){c.fin=t;chSave(c);toast('Challenge complete! '+N+' of '+N+' days 🎉');buzz&&buzz([40,60,40])}
+  else{chSave(c);toast('Day '+c.done.length+' of '+N+' done')}
+  return true;
+}
+
+/* ---- daily goal ring: minutes trained today (workouts + logged activities) ---- */
+function minutesToday(){
+  const t=today();let m=0;
+  allSessions().forEach(s=>{if(s.s&&dk0(s.s)===t)m+=clamp(((s.e||s.s)-s.s)/60000,0,180)});
+  (S.acts||[]).forEach(a=>{if(a.d===t)m+=+a.min||0});
+  if(S.sess&&dk0(S.sess.s)===t)m+=clamp((Date.now()-S.sess.s)/60000,0,180);
+  return Math.round(m);
+}
+function dk0(ms){const d=new Date(ms);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+const dayGoal=()=>+(S.profile&&S.profile.dayMin)||20;
+function goalRing(fr,size,label,sub){
+  const r=size/2-7,C=2*Math.PI*r,f=clamp(fr,0,1);
+  return`<svg class="gring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--fill)" stroke-width="9"/>
+  <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--acc)" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-f)}" transform="rotate(-90 ${size/2} ${size/2})" style="transition:stroke-dashoffset .8s var(--ease)"/>
+  <text x="50%" y="${sub?'47%':'53%'}" text-anchor="middle" dominant-baseline="middle" class="gr-t">${label}</text>${sub?`<text x="50%" y="66%" text-anchor="middle" class="gr-s">${sub}</text>`:''}</svg>`;
+}
+
+/* ---- home: today card (ring + challenge day or quick start) ---- */
+const QT=[5,10,15,20,30],QF=[['full','Full body'],['upper','Upper'],['lower','Lower'],['core','Core'],['cond','Cardio']];
+S.qw=S.qw||{t:10,f:'full'};
+function todayCard(){
+  const m=minutesToday(),g=dayGoal(),c=chSt();
+  let mid;
+  if(c&&!c.fin){
+    const N=CHAL[c.id].days.length,d=chDay(c),doneToday=c.done.some(x=>x.d===today());
+    mid=`<div class="lbl">${esc(CHAL[c.id].n)}</div><div class="ch-day">Day ${Math.min(c.done.length+(doneToday?0:1),N)}<span class="mu"> / ${N}</span></div>
+    <div class="sm mu">${doneToday?'Today is done. See you tomorrow.':esc(chDesc(d))}</div>
+    <div class="ch-bar"><i style="width:${c.done.length/N*100}%"></i></div>
+    ${doneToday?'':d.r?`<button class="btn s" style="margin-top:12px" data-act="chRest">Mark rest day done</button>`:`<div class="row" style="margin-top:12px;gap:8px"><button class="btn s" data-act="chGo" data-a="g">Start</button><button class="btn s ghost" data-act="chGo">Own workout</button></div>`}`;
+  }else{
+    mid=`<div class="lbl">Today</div><div style="font-weight:700;font-size:18px;margin-top:2px">${m>=g?'Daily goal reached':`${g-m} min to your goal`}</div>
+    <div class="sm mu">${c&&c.fin?`You finished ${esc(CHAL[c.id].n)}. `:''}Start a challenge to get a plan for every day.</div>
+    <button class="btn s" style="margin-top:12px" data-act="tab" data-a="chal">${c&&c.fin?'Pick a new challenge':'See challenges'}</button>`;
+  }
+  return`<div class="card today"><div class="row" style="gap:16px;align-items:center"><button class="ring-b" data-act="dayGoal" aria-label="Change daily goal">${goalRing(m/g,96,m+'',`of ${g} min`)}</button><div class="grow" style="min-width:0">${mid}</div></div></div>`+quickCard();
+}
+function quickCard(){
+  const q=S.qw;
+  return`<div class="card"><div class="row sp"><div><div style="font-weight:700">Quick workout</div><div class="mu sm">Pick a time. Legacy builds it and coaches you through.</div></div></div>
+  <div class="qt">${QT.map(t=>`<button class="qtb${q.t===t?' on':''}" data-act="qwSet" data-a="t" data-b="${t}"><b>${t}</b><span>min</span></button>`).join('')}</div>
+  <div class="chips" style="margin-top:10px">${QF.map(([k,l])=>`<button class="chip${q.f===k?' on':''}" data-act="qwSet" data-a="f" data-b="${k}">${l}</button>`).join('')}</div>
+  <button class="btn blk" style="margin-top:12px" data-act="qwGo">Start ${q.t}-minute ${(QF.find(x=>x[0]===q.f)||[0,''])[1].toLowerCase()} workout</button></div>`;
+}
+
+/* ---- challenges page ---- */
+V2.chal=()=>{
+  const c=chSt();let top='';
+  if(c){
+    const C=CHAL[c.id],N=C.days.length,nx=c.done.length;
+    top=`<div class="card gold"><div class="row sp"><div class="lbl">${c.fin?'Completed':'Your challenge'}</div>${c.fin?'':'<button class="btn s ghost" data-act="chQuitAsk">Quit</button>'}</div>
+    <div style="font-weight:800;font-size:22px;margin-top:4px">${esc(C.n)}</div><div class="mu sm">${nx} of ${N} days done${c.fin?' · finished '+dlabel(c.fin,true):''}</div>
+    <div class="ch-bar" style="margin-top:10px"><i style="width:${nx/N*100}%"></i></div>
+    <div class="ch-grid">${C.days.map((d,i)=>`<div class="ch-c${i<nx?' ok':i===nx&&!c.fin?' nx':''}${d.r?' r':''}" title="${esc(chDesc(d))}"><span>${i+1}</span>${i<nx?'<b>✓</b>':d.r?'<em>rest</em>':''}</div>`).join('')}</div>
+    ${c.fin?'':`<p class="sm" style="margin:12px 0 0"><b>Next: day ${nx+1}</b> · ${esc(chDesc(chDay(c)))}</p>`}</div>`;
+  }
+  return`<h2>Challenges</h2>${top}${Object.entries(CHAL).filter(([k])=>!c||c.fin||k!==c.id).map(([k,C])=>{
+    const w=C.days.filter(d=>!d.r),avg=Math.round(w.reduce((a,d)=>a+d.t,0)/w.length);
+    return`<div class="card"><div class="row sp" style="align-items:flex-start"><div class="grow"><div style="font-weight:700;font-size:17px">${esc(C.n)}</div><div class="mu sm" style="margin-top:2px">${esc(C.d)}</div>
+    <div class="row wrap" style="gap:6px;margin-top:10px"><span class="pill">${C.days.length} days</span><span class="pill">~${avg} min a day</span><span class="pill">${w.length} workouts · ${C.days.length-w.length} rest</span><span class="pill">${esc(C.lvl)}</span></div></div></div>
+    <button class="btn s" style="margin-top:12px" data-act="chStart" data-a="${k}">Start this challenge</button></div>`}).join('')}
+  <p class="mu xs">Any workout you finish counts as that day. Missed a day? Nothing resets: just pick up where you left off.</p>`;
+};
+
+/* ---- actions ---- */
+function buildAndStart(focus,time,goal,seed,label,guided){
+  if(S.sess){toast('Finish or discard your current workout first');S.tab='wk';render();return false}
+  S.mk={focus,time,goal,feel:'ok',seed:seed||0,ids:null};mkBuild();
+  if(!S.mk.ids||!S.mk.ids.length)return false;
+  A.mkStart();if(S.sess){S.sess.sd=label;saveActive();if(guided)A.gdOpen()}
+  return true;
+}
+Object.assign(A,{
+  chStart(k){
+    const c=chSt();
+    if(c&&!c.fin&&c.id!==k){S.modal={type:'confirm',title:'Switch challenge?',msg:'Your progress in '+CHAL[c.id].n+' will be cleared.',act:'chStartDo',arg:k,ok:'Switch'};render();return}
+    A.chStartDo(k);
+  },
+  chStartDo(k){S.modal=null;chSave({id:k,start:today(),done:[]});toast(CHAL[k].n+' started');S.tab='home';render();scrollTo(0,0)},
+  chQuitAsk(){S.modal={type:'confirm',title:'Quit challenge?',msg:'Your progress in this challenge will be cleared. Your workouts stay in your history.',act:'chQuit',ok:'Quit',red:1};render()},
+  chQuit(){S.modal=null;setProf('ch',null);render()},
+  chRest(){if(chMark('rest'))render()},
+  chGo(a){const c=chSt();if(!c)return;const d=chDay(c),C=CHAL[c.id];
+    if(d.r){A.chRest();return}
+    if(a!=='g'){S.tab='wk';render();toast('Any workout you finish today counts as day '+(c.done.length+1));return}
+    buildAndStart(d.f,d.t,d.g,c.done.length,C.n+' · Day '+(c.done.length+1),true)},
+  qwSet(k,v){S.qw[k]=k==='t'?+v:v;render()},
+  qwGo(){const q=S.qw;buildAndStart(q.f,q.t,q.t<=10?'burn':q.f==='cond'?'burn':'endure',(S.qwSeed=(S.qwSeed||0)+1),q.t+'-minute '+(QF.find(x=>x[0]===q.f)||[0,'workout'])[1].toLowerCase(),true)},
+  dayGoal(){const o=[10,15,20,30,45,60],i=o.indexOf(dayGoal());setProf('dayMin',o[(i+1)%o.length]);toast('Daily goal: '+dayGoal()+' min');render()}
+});
+{const _f=A.finish;A.finish=function(){const had=S.sess&&S.sess.sets&&S.sess.sets.length;const r=_f.apply(this,arguments);if(had&&!S.sess)chMark('w');return r}}
+{const _hh=homeHub;homeHub=function(){return todayCard()+_hh()}}
+{const _wk=wkView;wkView=function(){const h=_wk();return S.sess?h:h+`<div class="card"><div class="row sp"><div><div style="font-weight:700">Challenges</div><div class="mu sm">${chSt()&&!chSt().fin?esc(CHAL[chSt().id].n)+' · day '+(chSt().done.length+1):'21 to 30 day plans with a workout for every day.'}</div></div><button class="btn s" data-act="tab" data-a="chal">Open</button></div></div>`}}
 
 Object.assign(A,{
  lookSet(k,v){LOOK[k]=(k==='px')?+v:v;saveLook();applySky(true);render();dtPaintAll()},

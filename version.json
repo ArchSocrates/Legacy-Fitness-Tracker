@@ -1,9 +1,9 @@
 {
-  "version": "2.2.0",
+  "version": "2.3.0",
   "color": "#000000",
   "notes": [
-    "New Calculators: body fat %, BMI and healthy range, ideal weight, calories per day, macros, protein, water, one-rep max, heart-rate zones, calories burned and waist-to-height",
-    "Calculators fill in your details automatically, can save body fat to your log and set your food target",
-    "Neck added to measurements for the body fat tape method"
+    "Challenges: 21-Day Kickstart, 21-Day Fat Burn, 28-Day Core and 30-Day Strength, with a workout built for each day and a day-by-day grid",
+    "Daily goal ring on Home: minutes trained today from workouts and activities. Tap it to change your goal",
+    "Quick workouts: pick 5 to 30 minutes and a focus, and Legacy coaches you through it"
   ]
 }
