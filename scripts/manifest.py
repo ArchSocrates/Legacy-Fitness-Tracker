@@ -21,4 +21,12 @@ assert m,'no MainActivity'
 s=s[:m.end()]+'\n'+extra+s[m.end():]
 s=s.replace('android:allowBackup="true"','android:allowBackup="false"')
 open(p,'w').write(s)
+# HyperOS/MIUI and some Android skins force-darken apps; Legacy draws its own themes, so opt out
+sp='android/app/src/main/res/values/styles.xml'
+try:
+  st=open(sp).read()
+  if 'forceDarkAllowed' not in st:
+    st=re.sub(r'(<style name="AppTheme[^"]*"[^>]*>)',r'\1\n        <item name="android:forceDarkAllowed">false</item>',st)
+    open(sp,'w').write(st)
+except FileNotFoundError: pass
 print('manifest patched')

@@ -22,7 +22,7 @@ html,body{margin:0;color:var(--tx);font:15px/1.5 system-ui,-apple-system,Roboto,
 html{background:var(--sky2)}
 body{padding-top:env(safe-area-inset-top);min-height:100vh}
 #sky{position:fixed;top:0;right:0;bottom:0;left:0;z-index:-1;overflow:hidden;background:var(--sky1)}
-#dc{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+#dc{position:absolute;top:0;right:0;left:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
 .seal{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:var(--seal);color:#fff;font-family:'Shippori Mincho','Noto Serif JP',serif;font-weight:600;font-size:17px;line-height:1;border-radius:3px;transform:rotate(-5deg);margin-left:4px;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35)}
 #app{max-width:640px;margin:0 auto;min-height:100vh;padding:0 16px calc(120px + 24vh + env(safe-area-inset-bottom))}
 /* headings and loose notes sit on a small background block so they stay readable over the mountain */
@@ -333,6 +333,23 @@ nav.nav button.on .pxi{animation:none!important;transform:translateY(-1px)}
 .vw>.quote{border-radius:0 12px 12px 0!important}
 .brand b{font-size:22px!important}
 @media (prefers-reduced-motion:reduce){.vw.in,.modal,.modal>div{animation:none!important}}
+
+/* ---- device fit: small phones, landscape phones, tablets, keyboards, low-power devices ---- */
+@media (min-width:760px){#app{max-width:720px}}
+@media (max-height:500px) and (orientation:landscape){
+ nav.nav button span{display:none}nav.nav button{padding:6px 0!important}svg.pxi,nav.nav svg.pxi{width:22px;height:22px}
+ .top{padding:6px 16px 4px!important}.brand b{font-size:18px!important}h2{font-size:26px!important;margin:14px 0 8px!important}
+ #app{padding-bottom:calc(80px + env(safe-area-inset-bottom))}.hero{font-size:26px!important}
+}
+@media (max-width:350px){#app{padding-left:12px;padding-right:12px}.top{margin:0 -12px!important;padding:10px 12px 6px!important}h2{font-size:27px!important}.btn{padding:10px 14px}.card{padding:14px}}
+html.kb nav.nav,html.kb .tbar{display:none!important}
+html.kb #app{padding-bottom:24px}
+/* low-power mode: no live blur, slightly more solid glass */
+html.lite *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html.lite{--glass:var(--glass-solid)!important;--glass2:var(--glass2-solid)!important}
+@supports not ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){:root{--glass:var(--glass-solid)!important;--glass2:var(--glass2-solid)!important}}
+.cd{min-height:40px}
+h2,.vw>.mu,.vw>.hero,.vw>.quote,.leg{width:-webkit-fit-content;width:fit-content}
 </style>
 </head>
 <body>
@@ -648,12 +665,12 @@ const PRESETS=[
  ['Cream','#f1ece0','#141414','#e0452b','#1f7fd1'],['Riso','#f6efe6','#1d2a6b','#ff4f7b','#00a38a']
 ];
 // defaults: black and white, stippled, normal pixels, calm animation (smooth and light on battery)
-const LOOK_DEF={bg:'#0a0a0a',ink:'#f5f5f5',acc:'#d6d6d6',acc2:'#7a7a7a',dith:'stipple',px:4,mot:'calm',tmr:'auto',v:5};
+const LOOK_DEF={bg:'#0a0a0a',ink:'#f5f5f5',acc:'#d6d6d6',acc2:'#7a7a7a',dith:'stipple',px:4,mot:'calm',tmr:'auto',fx:'auto',v:5};
 const isHex=c=>typeof c==='string'&&/^#[0-9a-f]{6}$/i.test(c);
 function normLook(j){
   const o=Object.assign({},LOOK_DEF);if(!j||typeof j!=='object')return o;
   if(j.v!==5)return o; // settings from before this version start fresh on the new defaults
-  ['mot','tmr'].forEach(k=>{if(typeof j[k]==='string')o[k]=j[k]});if([3,4,6].includes(+j.px))o.px=+j.px;
+  ['mot','tmr','fx'].forEach(k=>{if(typeof j[k]==='string')o[k]=j[k]});if([3,4,6].includes(+j.px))o.px=+j.px;
   {['bg','ink','acc','acc2'].forEach(k=>{if(isHex(j[k]))o[k]=j[k].toLowerCase()});if(typeof j.dith==='string')o.dith=j.dith}
   return o; // older looks move to the new stippled style
 }
@@ -680,7 +697,7 @@ function themeVars(th){
   const accT=contrast(acc,base)>=2.6?acc:mix(acc,tx,.45);
   const v={'--acc2':th.acc2,'--sky1':bg,'--sky2':bg,'--m1':tx,'--m2':tx,'--m3':tx,'--orb':acc,
    '--tx':tx,'--mu':mu,'--line':rgba(tx,.26),'--track':rgba(tx,.16),'--ink':tx,'--bd':tx,'--shd':shd,
-   '--seal':accT,'--panel':base,'--panel-s':base,'--field':rgba(tx,L?.06:.07),'--field2':rgba(tx,L?.12:.14),'--glass':rgba(base,L?.62:.5),'--scrim':rgba(bg,L?.5:.42),'--fill':rgba(tx,L?.08:.12),'--elev':L?'#ffffff':mix(bg,tx,.22),'--glass2':rgba(base,L?.78:.7),'--gline':rgba(tx,L?.16:.2),'--ghi':L?'rgba(255,255,255,.55)':'rgba(255,255,255,.12)',
+   '--seal':accT,'--panel':base,'--panel-s':base,'--field':rgba(tx,L?.06:.07),'--field2':rgba(tx,L?.12:.14),'--glass':rgba(base,L?.62:.5),'--glass-solid':rgba(base,L?.92:.88),'--glass2-solid':rgba(base,L?.96:.93),'--scrim':rgba(bg,L?.5:.42),'--fill':rgba(tx,L?.08:.12),'--elev':L?'#ffffff':mix(bg,tx,.22),'--glass2':rgba(base,L?.78:.7),'--gline':rgba(tx,L?.16:.2),'--ghi':L?'rgba(255,255,255,.55)':'rgba(255,255,255,.12)',
    '--acc':accT,'--acc-t':lumOf(accT)>.38?'#121212':'#ffffff','--ok':ok,'--bad':bad,
    '--d50':tileUri(rgba(shd,.5),'50'),'--d25':tileUri(rgba(shd,.4),'25'),
    '--bw':LOOK.px>=6?'3px':'2px','--sh':LOOK.px>=6?'5px':LOOK.px<=3?'3px':'4px'};
@@ -715,8 +732,9 @@ function buildObj(W,H){
 }
 let _sceneKey='',_sceneT=0;
 function renderScene(cv,th,min,tt,dims){
-  const px=LOOK.px,W=dims?dims[0]:Math.max(8,Math.ceil(innerWidth/px)),H=dims?dims[1]:Math.max(8,Math.ceil(innerHeight/px));
+  const px=LOOK.px,W=dims?dims[0]:Math.max(8,Math.ceil(innerWidth/px)),H=dims?dims[1]:Math.max(8,Math.ceil(Math.max(innerHeight,typeof _vhMax==='number'?_vhMax:0)/px));
   if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H}
+  if(!dims)cv.style.height=(H*px)+'px';
   const ctx=cv.getContext&&cv.getContext('2d');if(!ctx)return;
   const O=buildObj(W,H),img=ctx.createImageData(W,H),d=img.data,thr=thrFn(LOOK.dith);
   const BG=h2r(th.bg),A=h2r(th.acc),HI=h2r(th.ink),A2=h2r(th.acc2||th.acc),t=tt||0;
@@ -753,8 +771,24 @@ function buildSky(){
   let wp=document.createElement('canvas');wp.id='wipe';document.body.appendChild(wp);
 }
 let _skyTh=null,_skyMin=0,_animT=null,_animGap=160;
+/* effects: Auto turns off live blur on phones that draw the artwork slowly; Smooth always off; Full always on */
+let _fxN=0,_fxSum=0,_fxAuto=null;
+try{_fxAuto=localStorage.getItem('legacy_fx_auto')}catch(e){}
+function applyFx(){const lite=LOOK.fx==='lite'||(LOOK.fx==='auto'&&_fxAuto==='lite');document.documentElement.classList.toggle('lite',lite)}
+let _fxJank=null;
+function noteFrame(ms){
+  if(LOOK.fx!=='auto'||_fxAuto)return;_fxN++;if(_fxN<2)return; // the first frame also builds the 3D shape
+  _fxSum+=ms;if(_fxN>=5&&_fxJank!==null)fxDecide();
+}
+function fxDecide(){
+  const mem=navigator.deviceMemory||8,cores=navigator.hardwareConcurrency||8;
+  const slow=_fxSum/Math.max(1,_fxN-1)>32||_fxJank>24||mem<=4||cores<=4;
+  _fxAuto=slow?'lite':'full';try{localStorage.setItem('legacy_fx_auto',_fxAuto)}catch(e){}applyFx();
+}
+// measure how smoothly the screen refreshes for two seconds with the effects on
+(function(){if(_fxAuto)return;const t=[];let last=0;const f=ts=>{if(last)t.push(ts-last);last=ts;if(t.length<120)requestAnimationFrame(f);else{t.sort((a,b)=>a-b);_fxJank=t[Math.floor(t.length*.75)];if(_fxN>=5&&!_fxAuto)fxDecide()}};setTimeout(()=>requestAnimationFrame(f),1500)})();
 function sceneFrame(){
-  const cv=$('#dc');if(cv&&_skyTh){const t0=performance.now();renderScene(cv,_skyTh,0,Date.now()/1000);const ms=performance.now()-t0;
+  const cv=$('#dc');if(cv&&_skyTh){const t0=performance.now();renderScene(cv,_skyTh,0,Date.now()/1000);const ms=performance.now()-t0;noteFrame(ms);
     _animGap=Math.min(1500,Math.max(LOOK.mot==='calm'?400:140,ms*5))} // never spend more than about a fifth of the time drawing
 }
 function animLoop(){clearTimeout(_animT);if(!motionOn())return;_animT=setTimeout(()=>{if(!document.hidden)sceneFrame();animLoop()},_animGap)}
@@ -763,10 +797,16 @@ function applySky(force){
   const th=lookTheme(),v=themeVars(th),root=document.documentElement;
   Object.entries(v).forEach(([k,x])=>root.style.setProperty(k,x));
   root.dataset.mode=th.light?'light':'dark';root.dataset.mot=motionOn()?'on':'off';
-  _skyTh=th;_skyMin=0;sceneFrame();animLoop();
+  _skyTh=th;_skyMin=0;applyFx();sceneFrame();animLoop();
   let m=document.querySelector('meta[name=theme-color]');if(!m){m=document.createElement('meta');m.name='theme-color';document.head.appendChild(m)}m.content=th.bg;
 }
-function fitMtn(){clearTimeout(fitMtn._t);fitMtn._t=setTimeout(()=>applySky(true),120)}
+let _vw=innerWidth,_vhMax=innerHeight;
+function fitMtn(){
+  const kb=innerWidth===_vw&&innerHeight<_vhMax*.75;document.documentElement.classList.toggle('kb',kb);
+  if(innerWidth!==_vw){_vw=innerWidth;_vhMax=innerHeight}else if(innerHeight>_vhMax)_vhMax=innerHeight;
+  if(kb)return; // keyboard open: keep the artwork as it is
+  clearTimeout(fitMtn._t);fitMtn._t=setTimeout(()=>applySky(true),150);
+}
 window.addEventListener('resize',fitMtn);
 /* ---- button ripples and tab wipes ---- */
 let _ptrs=0;document.addEventListener('pointerup',()=>{_ptrs=Math.max(0,_ptrs-1)},{passive:true});document.addEventListener('pointercancel',()=>{_ptrs=0;const f=$('#fx');if(f)f.innerHTML=''},{passive:true});
@@ -856,6 +896,7 @@ function lookCard(){
   <div class="lbl" style="margin:14px 0 8px">Pixel size</div>${seg('px',[[3,'Fine'],[4,'Normal'],[6,'Chunky']])}
   <div class="lbl" style="margin:14px 0 8px">Countdown style</div>${seg('tmr',[['auto','Auto'],['moon','Moon'],['tide','Tide'],['dissolve','Dissolve'],['ring','Ring']])}
   <div class="lbl" style="margin:14px 0 8px">Animation</div>${seg('mot',[['auto','Auto'],['full','Full'],['calm','Calm'],['off','Off']])}
+  <div class="lbl" style="margin:14px 0 8px">Glass effects</div>${seg('fx',[['auto','Auto'],['full','Full'],['lite','Smooth']])}<p class="mu xs" style="margin:6px 0 0">Auto turns the blur off on phones where it would feel slow${LOOK.fx==='auto'&&_fxAuto?` (this device: ${_fxAuto==='lite'?'Smooth':'Full'})`:''}.</p>
   <button class="btn ghost s" style="margin-top:14px" data-act="lookReset">Reset appearance</button></div>`;
 }
 

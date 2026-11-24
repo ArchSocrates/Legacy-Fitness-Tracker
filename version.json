@@ -1,9 +1,9 @@
 {
-  "version": "2.1.0",
+  "version": "2.1.1",
   "color": "#000000",
   "notes": [
-    "iPhone-style interface: clean system text, large bold titles, pill buttons and iOS segmented controls",
-    "Dithered pixel icons in the tab bar and buttons; the active tab fills in",
-    "Smooth spring animations for screen changes and sheets, and the artwork is softened behind content so everything reads clearly"
+    "Fits more phones and tablets: small phones, phones in landscape, and large tablets in both orientations",
+    "Low-power phones automatically use Smooth glass (no live blur) so scrolling stays fluid; change it in Settings",
+    "The tab bar hides while the keyboard is open, and the system dark mode no longer changes the app's colours"
   ]
 }
