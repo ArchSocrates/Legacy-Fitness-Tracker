@@ -7,4 +7,5 @@ let html = fs.readFileSync('src/app.html', 'utf8');
 const info = `<script>window.LEGACY_VERSION=${JSON.stringify(ver.version)};window.LEGACY_BUILD=${JSON.stringify(process.env.GITHUB_RUN_NUMBER || '')};window.LEGACY_NOTES=${JSON.stringify(ver.notes || [])};window.LEGACY_REPO="ArchSocrates/Legacy-Fitness-Tracker";</script>`;
 html = html.replace('<head>', '<head>\n' + info + '\n<script src="adapter.js"></script>');
 fs.writeFileSync('www/index.html', html);
+fs.cpSync('src/fonts', 'www/fonts', { recursive: true });
 console.log('built v' + ver.version, html.length, 'bytes');

@@ -1,6 +1,6 @@
 {
   "name": "legacy-fitness-tracker",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -11,7 +11,12 @@
     "@capacitor/cli": "^6.1.2",
     "@capacitor/core": "^6.1.2",
     "firebase": "^10.14.1",
-    "@capacitor/local-notifications": "^6.1.0"
+    "@capacitor/local-notifications": "^6.1.0",
+    "@capacitor/app": "^6.0.3",
+    "@capacitor/share": "^6.0.4",
+    "@capacitor/filesystem": "^6.0.4",
+    "@capacitor-mlkit/barcode-scanning": "^6.2.0",
+    "capacitor-health-connect": "file:plugins/health-connect"
   },
   "devDependencies": {
     "esbuild": "^0.24.0",

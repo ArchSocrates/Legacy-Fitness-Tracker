@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+  <shortcut android:shortcutId="start" android:enabled="true" android:shortcutShortLabel="@string/sc_start" android:shortcutLongLabel="@string/sc_start_l">
+    <intent android:action="android.intent.action.VIEW" android:data="legacy://start" android:targetPackage="com.legacy.fitness" android:targetClass="com.legacy.fitness.MainActivity" />
+  </shortcut>
+  <shortcut android:shortcutId="food" android:enabled="true" android:shortcutShortLabel="@string/sc_food" android:shortcutLongLabel="@string/sc_food_l">
+    <intent android:action="android.intent.action.VIEW" android:data="legacy://food" android:targetPackage="com.legacy.fitness" android:targetClass="com.legacy.fitness.MainActivity" />
+  </shortcut>
+  <shortcut android:shortcutId="activity" android:enabled="true" android:shortcutShortLabel="@string/sc_act" android:shortcutLongLabel="@string/sc_act_l">
+    <intent android:action="android.intent.action.VIEW" android:data="legacy://activity" android:targetPackage="com.legacy.fitness" android:targetClass="com.legacy.fitness.MainActivity" />
+  </shortcut>
+  <shortcut android:shortcutId="timer" android:enabled="true" android:shortcutShortLabel="@string/sc_timer" android:shortcutLongLabel="@string/sc_timer_l">
+    <intent android:action="android.intent.action.VIEW" android:data="legacy://timer" android:targetPackage="com.legacy.fitness" android:targetClass="com.legacy.fitness.MainActivity" />
+  </shortcut>
+</shortcuts>

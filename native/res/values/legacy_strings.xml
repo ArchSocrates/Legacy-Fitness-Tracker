@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="sc_start">Start workout</string>
+  <string name="sc_start_l">Start workout</string>
+  <string name="sc_food">Log food</string>
+  <string name="sc_food_l">Log food</string>
+  <string name="sc_act">Log cardio</string>
+  <string name="sc_act_l">Log cardio or sport</string>
+  <string name="sc_timer">Timer</string>
+  <string name="sc_timer_l">Open the timer</string>
+</resources>

@@ -1,14 +1,19 @@
 {
-  "version": "1.1",
-  "color": "#33406e",
+  "version": "2.0",
+  "color": "#1f5f5b",
   "notes": [
-    "Two panes side by side on tablets and big screens",
-    "Personal records with a celebration when you beat your best",
-    "Overload hints: a suggested weight and reps for each exercise",
-    "Streaks that understand rest days and sick days",
-    "Body measurements and progress photos",
-    "Workout reminders on the days you choose",
-    "Friends leaderboard (opt in) and sharing a workout by code",
-    "New app icon, and a version number you can see in You"
+    "All new dithered pixel look, with colourways you can customise in You, then Appearance",
+    "Pixel countdown timers (moon, tide, dissolve) and button press animations",
+    "One-tap logging: same as last set, copy last session and effort (RPE) per set",
+    "Plate calculator and warm-up sets",
+    "Tabata, EMOM and AMRAP timers",
+    "Cardio and sport logging with calories burned (no GPS)",
+    "Nutrition: calorie and protein target, food search, barcode scan, custom foods, weight vs intake chart",
+    "Daily readiness check, muscle map, ranks and badges",
+    "Shareable weekly recap image",
+    "Lock-screen rest countdown with +30s, Skip and Next set buttons (Android)",
+    "Health Connect sync for steps, heart rate, sleep and active calories",
+    "Home-screen shortcuts, animated move guides, hardware back button",
+    "Works on Android 8 and newer"
   ]
 }

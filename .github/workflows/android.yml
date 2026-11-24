@@ -14,7 +14,7 @@ jobs:
         with: { node-version: 20, cache: npm }
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
-      - run: npm install --no-audit --no-fund
+      - run: npm install --no-audit --no-fund --legacy-peer-deps
       - name: Read version
         id: ver
         run: |
@@ -25,11 +25,15 @@ jobs:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
       - name: Add Android project
         run: npx cap add android
-      - name: Icon, permissions and version
+      - name: Icon, permissions, native code and version
         run: |
           node scripts/icons.mjs
-          M=android/app/src/main/AndroidManifest.xml
-          sed -i 's#<application#<uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <application#' $M
+          python3 scripts/manifest.py
+          mkdir -p android/app/src/main/java/com/legacy/fitness
+          cp native/java/*.java android/app/src/main/java/com/legacy/fitness/
+          cp -r native/res/* android/app/src/main/res/
+          sed -i 's/minSdkVersion = [0-9]*/minSdkVersion = 26/' android/variables.gradle
+          grep -n "minSdkVersion" android/variables.gradle
           F=android/app/build.gradle
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" $F
           sed -i "s/versionName \"1.0\"/versionName \"${{ steps.ver.outputs.v }}\"/" $F
@@ -41,14 +45,14 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
       - name: Rename
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk Legacy.apk
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk Legacy-v${{ steps.ver.outputs.v }}.apk
       - uses: actions/upload-artifact@v4
-        with: { name: Legacy-apk, path: Legacy.apk }
+        with: { name: Legacy-apk, path: Legacy-v${{ steps.ver.outputs.v }}.apk }
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.v }}
           name: Legacy v${{ steps.ver.outputs.v }}
           body_path: notes.md
-          files: Legacy.apk
+          files: Legacy-v${{ steps.ver.outputs.v }}.apk
           make_latest: true
