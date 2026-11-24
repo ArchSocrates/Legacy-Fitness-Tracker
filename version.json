@@ -1,8 +1,10 @@
 {
-  "version": "2.0.5",
-  "color": "#2f9b5b",
+  "version": "2.0.6",
+  "color": "#de4f7f",
   "notes": [
-    "Fixed the real cause of the stuck Loading your data screen: a background Health Connect check was covering the sign-in screen",
-    "Health Connect now only checks after your data has loaded"
+    "Numbers are easier to read: a 5 no longer looks like an S",
+    "New Settings button on the You tab with appearance, reminders, Health Connect, help and account",
+    "The mountain and sun now sit at the bottom of the screen, and headings stay readable over it",
+    "Countdown timers use only your three colours"
   ]
 }

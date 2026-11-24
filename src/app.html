@@ -12,8 +12,10 @@
 --panel:rgba(255,255,255,.80);--panel-s:#f6f9ff;--field:rgba(255,255,255,.65);--field2:rgba(15,27,51,.08);
 --acc:#b5301d;--acc-t:#fff;--seal:#c8391f;--ink:#1c1814;--ok:#1f8a54;--bad:#c93b3b;
 --au:var(--acc);--au2:var(--acc);--em:var(--bad);--bl:#5b9dff;--p1:var(--panel);--p2:var(--field);--p3:var(--field2);--ln:var(--line);--bg:var(--sky2);--r:12px;
---disp:'Pixelify Sans','Courier New',monospace;--bw:2px;--sh:4px;--d50:none;--d25:none;--shd:#000}
+--disp:'LgNum','Pixelify Sans','Courier New',monospace;--bw:2px;--sh:4px;--d50:none;--d25:none;--shd:#000}
 @font-face{font-family:'Pixelify Sans';src:url(fonts/pixelify.woff2) format('woff2');font-weight:400 700;font-display:swap}
+/* Pixelify's 5 reads as an S, so digits come from Micro 5, a pixel font with a clear 5 */
+@font-face{font-family:'LgNum';src:url(fonts/num.woff2) format('woff2');unicode-range:U+30-39;size-adjust:130%;font-display:swap}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{color-scheme:light}html[data-mode=dark]{color-scheme:dark}
 html,body{margin:0;color:var(--tx);font:15px/1.5 system-ui,-apple-system,Roboto,'Segoe UI',sans-serif}
@@ -22,7 +24,12 @@ body{padding-top:env(safe-area-inset-top);min-height:100vh}
 #sky{position:fixed;top:0;right:0;bottom:0;left:0;z-index:-1;overflow:hidden;background:var(--sky1)}
 #dc{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
 .seal{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:var(--seal);color:#fff;font-family:'Shippori Mincho','Noto Serif JP',serif;font-weight:600;font-size:17px;line-height:1;border-radius:3px;transform:rotate(-5deg);margin-left:4px;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35)}
-#app{max-width:640px;margin:0 auto;min-height:100vh;padding:0 16px calc(150px + env(safe-area-inset-bottom))}
+#app{max-width:640px;margin:0 auto;min-height:100vh;padding:0 16px calc(120px + 24vh + env(safe-area-inset-bottom))}
+/* headings and loose notes sit on a small background block so they stay readable over the mountain */
+h2{width:fit-content;}
+.gear{display:flex;align-items:center;gap:8px;background:var(--field);color:var(--tx);border:var(--bw) solid var(--bd);box-shadow:3px 3px 0 var(--shd);padding:8px 12px;font-family:var(--disp);font-size:14px;margin-top:18px}.gear:active{transform:translate(2px,2px);box-shadow:none}
+h2{max-width:100%;background:var(--panel);padding:4px 12px 4px 6px}
+#app>.xs.mu,#app>.sm.mu,.pane>.xs.mu,.pane>.sm.mu,#app>.mu,.pane>.mu{background:var(--panel);width:fit-content;max-width:100%;padding:2px 8px}
 h1,h2,h3,.disp{font-family:var(--disp);margin:0;font-weight:400;letter-spacing:.005em}
 h2{font-size:30px;margin:30px 0 12px;line-height:1.1;display:flex;align-items:center;gap:12px}
 h2::before{content:'';width:9px;height:24px;background:var(--seal);border-radius:1px;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
@@ -614,16 +621,16 @@ function renderScene(cv,th,min,tt,dims){
   const BG=h2r(th.bg),INK=h2r(th.ink),ACC=h2r(th.acc);
   const put=(i,c)=>{d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255};
   // shape: a far ridge (dithered, reads lighter) and the main peak (solid), sitting in the lower part of the screen
-  const tall=H>W,peakX=tall?.5:.62,peakY=tall?.56:.46,baseY=tall?.80:.84;
+  const tall=H>W,peakX=tall?.46:.6,peakY=tall?.7:.62,baseY=tall?.9:.9;
   const far=new Float32Array(W),near=new Float32Array(W);
   for(let x=0;x<W;x++){
     const u=x/W;
     const f1=Math.max(0,1-Math.abs(u-(tall?.22:.24))/.34),f2=Math.max(0,1-Math.abs(u-(tall?.86:.9))/.3);
-    far[x]=H*(baseY-.02)-H*(.2*Math.pow(f1,1.25)+.15*Math.pow(f2,1.2))+(vnoise(x*.25,3,3)-.5)*H*.012;
+    far[x]=H*(baseY-.02)-H*(.14*Math.pow(f1,1.25)+.1*Math.pow(f2,1.2))+(vnoise(x*.25,3,3)-.5)*H*.012;
     const k=Math.max(0,1-Math.abs(u-peakX)/(tall?.62:.42));
     near[x]=H*baseY-H*(baseY-peakY)*Math.pow(k,1.35)+(vnoise(x*.3,9,11)-.5)*H*.014*k;
   }
-  const sx=W*(tall?.74:.8),sy=H*(tall?.2:.24),sr=Math.max(3,Math.min(W,H)*(tall?.085:.1));
+  const sx=W*(tall?.72:.76),sy=H*(peakY-.015),sr=Math.max(3,Math.min(W,H)*(tall?.075:.085));
   const snow=H*peakY+H*(baseY-peakY)*.22,lightL=sx<W*peakX;
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){
     const i=(y*W+x)*4,t=thr(x,y);let c=BG;
@@ -692,7 +699,7 @@ let _dtGlyph={};
 function glyph(txt,N){
   const k=txt+'|'+N;if(_dtGlyph[k])return _dtGlyph[k];
   const c=document.createElement('canvas');c.width=N;c.height=N;const x=c.getContext&&c.getContext('2d');if(!x)return new Uint8Array(N*N);x.fillStyle='#000';x.textAlign='center';x.textBaseline='middle';
-  x.font='700 '+Math.round(N*.78)+'px "Pixelify Sans",monospace';x.fillText(txt,N/2,N*.54);
+  x.font='700 '+Math.round(N*.78)+'px "LgNum","Pixelify Sans",monospace';x.fillText(txt,N/2,N*.54);
   const a=x.getImageData(0,0,N,N).data,m=new Uint8Array(N*N);for(let i=0;i<N*N;i++)m[i]=a[i*4+3]>110?1:0;_dtGlyph[k]=m;return m;
 }
 function dtDraw(cv){
@@ -708,7 +715,7 @@ function dtDraw(cv){
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){
       const nx=(x-cx)/R,ny=(y-cy)/R,r2=nx*nx+ny*ny;if(r2>1){if(r2<1.09)put(x,y,ink);continue}
       const nz=Math.sqrt(1-r2),I=nx*sp*(-1)+nz*cp,cr=hash2(Math.floor(x/3),Math.floor(y/3),4)<.07?.12:0;
-      put(x,y,ramp(dark,orb,clamp(I*.95+.08-cr,0,1),x,y,5));
+      const iv=clamp(I*.95+.08-cr,0,1);put(x,y,iv>thr(x,y)?orb:(thr(x,y)<.22?ink:panel));
     }
   }else if(style==='tide'){
     const lvl=cy+R-(2*R)*frac,t=Date.now()/420;
@@ -1665,7 +1672,7 @@ function render(){
 function header(){const back=S.profile&&S.tab!=='home'?'<button class="bk" data-act="back" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>':'';return`<div class="top"><div class="l">${back}<div class="brand">${MARK}<b>LEGACY</b></div></div><div class="hr">${S.profile&&window.innerWidth>=840&&lsGet('legacy_two')==='off'?'<button class="tb" data-act="twoToggle">Two panes</button>':''}${S.profile?'<button class="tb" data-act="tourMenu">Tour</button>':''}<div class="sync ${S.sync}" id="sync"><i></i><span>${S.sync==='saving'?'Saving…':S.sync==='error'?'Not saved':'Saved'}</span></div></div></div>`}
 function navHtml(){
   const t=[['home','Home','home'],['cal','Calendar','cal'],['lib','Exercises','lib'],['wk','Workout','wk'],['tm','Timer','tm'],['pr','Progress','pr'],['me','You','me']];
-  return`<nav class="nav"><div>${t.map(([k,l,i])=>`<button class="${S.tab===k?'on':''}" data-act="tab" data-a="${k}">${ico(i)}<span>${l}${k==='wk'&&S.sess?' •':''}</span></button>`).join('')}</div></nav>`;
+  return`<nav class="nav"><div>${t.map(([k,l,i])=>`<button class="${S.tab===k||(k==='me'&&S.tab==='set')?'on':''}" data-act="tab" data-a="${k}">${ico(i)}<span>${l}${k==='wk'&&S.sess?' •':''}</span></button>`).join('')}</div></nav>`;
 }
 function timerBar(){
   if(!T||S.tab==='tm')return'';
@@ -1759,10 +1766,15 @@ function setupView(){
 }
 function meView(){
   if(!S.P)S.P=JSON.parse(JSON.stringify(S.profile));
-  return`<h2>You</h2>${formHtml(false)}<button class="btn blk" data-act="saveP">Save changes</button>
+  return`<div class="row sp" style="align-items:center"><h2>You</h2><button class="gear" data-act="tab" data-a="set" aria-label="Settings">${GEAR}<span>Settings</span></button></div>${formHtml(false)}<button class="btn blk" data-act="saveP">Save changes</button>`;
+}
+const GEAR=`<svg width="22" height="22" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M7 1h2v2h1v1h1V3h2v2h-1v1h1v1h2v2h-2v1h-1v1h1v2h-2v-1h-1v1H9v2H7v-2H6v-1H5v1H3v-2h1v-1H3V9H1V7h2V6h1V5H3V3h2v1h1V3h1zm0 4v1H6v4h1v1h2v-1h1V6H9V5z"/></svg>`;
+function setView(){
+  return`<h2>Settings</h2>
+  ${lookCard()}${remCard()}${typeof hcCard==='function'?hcCard():''}
   <div class="card" style="margin-top:20px"><div class="row sp"><div><div style="font-weight:700">Learn and tour</div><div class="mu sm">Lessons, plus replay the app tour.</div></div><button class="btn s dark" data-act="tab" data-a="learn">Open</button></div></div>
-  ${lookCard()}
-  ${remCard()}${aboutCard()}
+  <div class="card" style="margin-top:20px"><div class="row sp"><div><div style="font-weight:700">What's new in v2</div><div class="mu sm">Replay the walkthrough of every new feature.</div></div><button class="btn s dark" data-act="wnOpen">Replay</button></div></div>
+  ${aboutCard()}
   <div class="card" style="margin-top:20px"><h3>Account</h3><p class="mu sm">Signed in as <b>@${esc(S.user)}</b>. Your data is encrypted with your password, so only you can read it. A forgotten password can't be recovered.</p>
   <div class="row wrap"><button class="btn dark s" data-act="signout">Sign out</button><button class="btn ghost s" data-act="export">Copy my data</button><button class="btn red s" data-act="wipeAsk">Delete all my data</button></div></div>`;
 }
@@ -2844,8 +2856,8 @@ async function recapCanvas(){
   const th=lookTheme(skyMinute());renderScene(low,th,skyMinute(),0,[lw,lh]);
   x.imageSmoothingEnabled=false;x.drawImage(low,0,0,W,H);
   const cs=getComputedStyle(document.documentElement),g=k=>cs.getPropertyValue(k).trim(),ink=g('--tx')||'#111',panel=g('--panel-s')||'#f8f1e2',acc=g('--acc')||'#c8391f';
-  try{await document.fonts.load('700 60px "Pixelify Sans"')}catch(e){}
-  const F=s=>s+'px "Pixelify Sans","Courier New",monospace',st=weekStats(),xi=xpInfo();
+  try{await Promise.all([document.fonts.load('700 60px "Pixelify Sans"'),document.fonts.load('60px LgNum','0123456789')])}catch(e){}
+  const F=s=>s+'px "LgNum","Pixelify Sans","Courier New",monospace',st=weekStats(),xi=xpInfo();
   const box=(bx,by,bw,bh)=>{x.fillStyle=ink;x.fillRect(bx+12,by+12,bw,bh);x.fillStyle=panel;x.fillRect(bx,by,bw,bh);x.strokeStyle=ink;x.lineWidth=8;x.strokeRect(bx+4,by+4,bw-8,bh-8)};
   box(70,70,940,250);x.fillStyle=ink;x.textBaseline='alphabetic';x.font='700 '+F(92);x.fillText('LEGACY',110,180);x.font=F(40);x.fillText('Week of '+dlabel(dkey(weekStart(Date.now())),true),110,240);x.fillStyle=acc;x.font='700 '+F(34);x.fillText((S.profile.name?S.profile.name+' · ':'')+xi.rk+' Lv '+xi.lv,110,292);
   const tiles=[[st.w,'workouts'],[st.sets,'sets'],[fmtN(st.vol),'volume '+(unit()==='lb'?'lb':'kg')],[Math.round(st.mins),'minutes'],[fmtN(st.kcal),'kcal burned'],[st.st,'day streak']];
@@ -2876,11 +2888,7 @@ homeView=function(){
 const _tv=trainView;
 trainView=function(){const h=_tv();return h+muscleMap()+`<button class="btn blk" style="margin:4px 0 14px" data-act="recap">Share my week</button>`};
 const _mev=meView;
-meView=function(){
-  const h=_mev(),i=h.indexOf('<div class="card" style="margin-top:20px"><div class="row sp"><div><h3 style="margin:0">Legacy v');
-  const extra=rankCard(true)+`<div class="card" style="margin-top:20px"><div class="row sp"><div><div style="font-weight:700">What's new in v2</div><div class="mu sm">Replay the walkthrough of every new feature.</div></div><button class="btn s dark" data-act="wnOpen">Replay</button></div></div>`;
-  return i<0?h+extra:h.slice(0,i)+extra+h.slice(i);
-};
+meView=function(){return _mev()+rankCard(true)};
 
 /* ================= v2: what's new, native bridge, back button, links ================= */
 const WN=[
@@ -2991,7 +2999,7 @@ function hcCard(){
   ${S.hc.ok?`<div class="tiles" style="margin:12px 0 0"><div class="tile"><div class="lbl">Steps</div><div class="big" style="font-size:30px">${fmtN(d.steps||0)}</div></div><div class="tile"><div class="lbl">Heart rate</div><div class="big" style="font-size:30px">${d.hr?Math.round(d.hr):'—'}</div><div class="xs mu">avg bpm</div></div><div class="tile"><div class="lbl">Sleep</div><div class="big" style="font-size:30px">${d.sleepMin?(d.sleepMin/60).toFixed(1):'—'}</div><div class="xs mu">hours last night</div></div><div class="tile"><div class="lbl">Active</div><div class="big" style="font-size:30px">${d.kcal?fmtN(Math.round(d.kcal)):'—'}</div><div class="xs mu">kcal burned</div></div></div>`:`<p class="mu sm" style="margin:8px 0 0">${S.hc.avail===false?'Health Connect is not installed or not available on this phone. Install it from Google Play, then try again.':'Read-only. Legacy never writes to Health Connect.'}</p>`}</div>`;
 }
 Object.assign(A,{hcGo(){hcRefresh(true)}});
-{const _me=meView;meView=function(){const h=_me(),i=h.indexOf('<div class="card" style="margin-top:20px"><div class="row sp"><div><h3 style="margin:0">Legacy v');return i<0?h+hcCard():h.slice(0,i)+hcCard()+h.slice(i)}}
+V2.set=setView;
 setInterval(()=>{if(!hcRefresh.done&&S.loaded&&S.profile&&window.LegacyNative&&window.LegacyNative.hcRead){hcRefresh.done=1;hcRefresh(false)}},3000);
 
 Object.assign(A,{
