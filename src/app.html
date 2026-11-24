@@ -2973,7 +2973,7 @@ window.LegacyAction=a=>{
 /* ---- Health Connect ---- */
 S.hc=S.hc||{ok:false,days:{},busy:false};
 async function hcRefresh(ask){
-  const N=window.LegacyNative;if(!N||!N.hcRead)return;
+  const N=window.LegacyNative;if(!N||!N.hcRead||!S.loaded)return;
   try{
     const st=await N.hcStatus();S.hc.avail=!!st.available;
     if(!st.available){S.hc.ok=false;render();return}
@@ -2992,7 +2992,7 @@ function hcCard(){
 }
 Object.assign(A,{hcGo(){hcRefresh(true)}});
 {const _me=meView;meView=function(){const h=_me(),i=h.indexOf('<div class="card" style="margin-top:20px"><div class="row sp"><div><h3 style="margin:0">Legacy v');return i<0?h+hcCard():h.slice(0,i)+hcCard()+h.slice(i)}}
-setTimeout(()=>{if(window.LegacyNative&&window.LegacyNative.hcRead)hcRefresh(false)},4000);
+setInterval(()=>{if(!hcRefresh.done&&S.loaded&&S.profile&&window.LegacyNative&&window.LegacyNative.hcRead){hcRefresh.done=1;hcRefresh(false)}},3000);
 
 Object.assign(A,{
  lookSet(k,v){LOOK[k]=(k==='px')?+v:v;saveLook();applySky(true);render();dtPaintAll()},
@@ -3020,6 +3020,7 @@ const ERRS=[];function noteErr(tag,e){ERRS.push(tag+': '+String(e&&(e.message||e
 viewOf=SAFE(viewOf,_vo,'view');modalHtml=SAFE(modalHtml,_mh,'modal');wxCard=SAFE(wxCard,_wx,'exercise');wkView=SAFE(wkView,_wkv,'workout');
 tmView=SAFE(tmView,_tmv,'timer');homeView=SAFE(homeView,_hv,'home');trainView=SAFE(trainView,_tv,'train');meView=SAFE(meView,_mev,'you');
 {const _rg=render;let fails=0;render=function(){
+  if(!S.user)return; // nobody signed in yet: the sign-in and start screens draw themselves, nothing may replace them
   try{_rg.apply(this,arguments);fails=0}
   catch(e){
     console.error('render',e);noteErr('screen',e);fails++;
