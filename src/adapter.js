@@ -21,6 +21,18 @@ import { HealthConnect } from 'capacitor-health-connect';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import cfg from './firebase-config.js';
 
+// After an app update: sign out and wipe this device's saved database copy, so the first launch of a
+// new version always starts from the sign-in screen with a clean slate. Runs before Firebase opens anything.
+let UPDATED = false;
+try {
+  const cur = String(window.LEGACY_VERSION || ''), prev = localStorage.getItem('legacy_app_ver');
+  if (cur && prev !== cur) {
+    UPDATED = true;
+    ['legacy_session', 'legacy_nocache'].forEach(k => localStorage.removeItem(k));
+    ['firebaseLocalStorageDb', 'firestore/[DEFAULT]/' + cfg.projectId + '/main'].forEach(n => { try { indexedDB.deleteDatabase(n) } catch (e) {} });
+    localStorage.setItem('legacy_app_ver', cur);
+  }
+} catch (e) {}
 const app = initializeApp(cfg);
 let NOCACHE = false;
 try { NOCACHE = localStorage.getItem('legacy_nocache') === '1'; } catch (e) {}
@@ -87,6 +99,7 @@ const db = {
   collection: p => colRef(p),
   doc: p => docRef(p),
   setMode: m => { MODE = m === 'lite' ? 'lite' : 'full' },
+  updated: () => UPDATED,
   info: () => ({ mode: MODE, cache: NOCACHE ? 'memory' : 'device', online: navigator.onLine, uid: !!uid(), adapter: 3 }),
   async resetCache() {
     try { localStorage.setItem('legacy_nocache', '1') } catch (e) {}
