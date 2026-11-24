@@ -1,9 +1,9 @@
 {
-  "version": "2.0.9",
+  "version": "2.1.0",
   "color": "#000000",
   "notes": [
-    "New default look: black and white, stippled, with calm animation that is smooth and easy on battery",
-    "Black and white app icon",
-    "Search boxes, chips and buttons stay readable over the artwork, and the header lines up with the boxes"
+    "iPhone-style interface: clean system text, large bold titles, pill buttons and iOS segmented controls",
+    "Dithered pixel icons in the tab bar and buttons; the active tab fills in",
+    "Smooth spring animations for screen changes and sheets, and the artwork is softened behind content so everything reads clearly"
   ]
 }
