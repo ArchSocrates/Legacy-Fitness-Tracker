@@ -47,7 +47,9 @@ jobs:
       - name: Rename
         run: cp android/app/build/outputs/apk/debug/app-debug.apk Legacy-v${{ steps.ver.outputs.v }}.apk
       - uses: actions/upload-artifact@v4
-        with: { name: Legacy-apk, path: Legacy-v${{ steps.ver.outputs.v }}.apk }
+        with:
+          name: Legacy-apk
+          path: Legacy-v${{ steps.ver.outputs.v }}.apk
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
