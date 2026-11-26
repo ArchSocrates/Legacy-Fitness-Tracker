@@ -14,15 +14,6 @@ service cloud.firestore {
       allow update: if request.auth != null && resource.data.o == request.auth.uid
                     && request.resource.data.o == request.auth.uid;
     }
-    // Recovery blobs. The id is a hash of the recovery code, the contents are encrypted with that code, so
-    // only someone holding the code can find or read one. Nobody can list them.
-    match /recov/{id} {
-      allow get: if true;
-      allow create: if request.auth != null && request.resource.data.o == request.auth.uid;
-      allow update: if request.auth != null && resource.data.o == request.auth.uid
-                    && request.resource.data.o == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.o == request.auth.uid;
-    }
     // Friends leaderboard (opt in). Anyone signed in can read it; you can only write your own row.
     match /board/{id} {
       allow read: if request.auth != null;

@@ -1109,7 +1109,7 @@ function authScreen(mode,msg,uval){
   <label class="row" style="margin-top:14px;gap:8px;font-size:14px"><input type="checkbox" id="a_rm" checked style="width:20px;height:20px;min-height:0"> Keep me signed in on this device</label>
   <div id="a_err" style="color:var(--em);font-size:13px;min-height:20px;margin-top:10px">${esc(msg||'')}</div>
   <button class="btn blk" id="a_go">${up?'Create account':'Sign in'}</button>
-  ${up?`<p class="mu xs" style="margin:12px 0 0">No email needed. Your workouts are encrypted with your password, so nobody else can read them. After this you get a <b>recovery code</b>. Save it: it is the only way back in if you forget your password.</p>`:''}</div></div>`;
+  ${up?`<p class="mu xs" style="margin:12px 0 0">No email needed. Your workouts are encrypted with your password, so nobody else can read them. Remember your password: there is no way to reset it.</p>`:''}</div></div>`;
   $('#am_in').onclick=()=>authScreen('in');$('#am_up').onclick=()=>authScreen('up');
   const go=()=>submitAuth(mode);$('#a_go').onclick=go;
   $$('#a_u,#a_p,#a_p2').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter')go()}));
@@ -1155,7 +1155,6 @@ async function submitAuth(mode){
       if(a.dk){try{key=await crypto.subtle.importKey('jwk',(await open(key,a.dk)).k,{name:'AES-GCM'},true,['encrypt','decrypt'])}catch(e){return fail('Wrong password.')}}
     }
     if(rm){try{localStorage.setItem('legacy_session',JSON.stringify({u,k:await crypto.subtle.exportKey('jwk',key)}))}catch(e){}}
-    if(up&&fp&&typeof rkCreate==='function'){let rc=null;try{rc=await rkCreate(u,key,fp)}catch(e){console.error('recovery code',e)}if(rc){rkShowScreen(rc,u,()=>enter(u,key));return}}
     enter(u,key);
   }catch(e){console.error(e);fail('Something went wrong. Check your connection and try again.'+(e&&(e.code||e.message)?' ['+String(e.code||e.message).slice(0,90)+']':''))}
 }
@@ -2046,7 +2045,7 @@ function setView(){
   <div class="card" style="margin-top:20px"><div class="row sp"><div><div style="font-weight:700">Learn and tour</div><div class="mu sm">Lessons, plus replay the app tour.</div></div><button class="btn s dark" data-act="tab" data-a="learn">Open</button></div></div>
   <div class="card" style="margin-top:20px"><div class="row sp"><div><div style="font-weight:700">What's new in v2</div><div class="mu sm">Replay the walkthrough of every new feature.</div></div><button class="btn s dark" data-act="wnOpen">Replay</button></div></div>
   ${aboutCard()}
-  <div class="card" style="margin-top:20px"><h3>Account</h3><p class="mu sm">Signed in as <b>@${esc(S.user)}</b>. Your data is encrypted with your password, so only you can read it.</p>${typeof rkRow==='function'?rkRow():''}
+  <div class="card" style="margin-top:20px"><h3>Account</h3><p class="mu sm">Signed in as <b>@${esc(S.user)}</b>. Your data is encrypted with your password, so only you can read it.</p>
   <div class="row wrap"><button class="btn dark s" data-act="signout">Sign out</button><button class="btn ghost s" data-act="export">Copy my data</button><button class="btn red s" data-act="wipeAsk">Delete all my data</button></div></div>`;
 }
 
@@ -2080,7 +2079,7 @@ function sessCard(s){
   const u=unit(),open=S.openSess===s.id;
   const names=[...new Set(s.sets.map(t=>t.x))];
   return`<div class="card" style="padding:12px 14px"><div class="row sp" data-act="osess" data-a="${s.id}" style="cursor:pointer"><div><div style="font-weight:700">${dlabel(dkey(s.s),true)}${s.rc!=null?' <span class="tag m">Recovery</span>':''}${s.sd?' <span class="tag">'+esc(s.sd)+'</span>':''}</div><div class="xs mu">${hms(s.e-s.s)} · ${s.sets.length} sets · ${names.length} exercises${volumeKg(s.sets)?' · '+fmtN(fromKg(volumeKg(s.sets),u))+' '+u:''}</div></div><span class="mu">${open?'−':'+'}</span></div>
-  ${open?names.map(x=>`<div style="margin-top:10px"><div class="sm" style="font-weight:600">${esc(BYID[x]?BYID[x].name:x)}</div>${s.sets.filter(t=>t.x===x).map((t,i)=>`<div class="xs mu">Set ${i+1}: ${esc(setText(t))}</div>`).join('')}</div>`).join('')+`<button class="btn red s" style="margin-top:12px" data-act="delSessAsk" data-a="${s.id}">Delete workout</button>`:''}</div>`;
+  ${open?names.map(x=>`<div style="margin-top:10px"><div class="sm" style="font-weight:600">${esc(BYID[x]?BYID[x].name:x)}</div>${s.sets.filter(t=>t.x===x).map((t,i)=>`<div class="xs mu">Set ${i+1}: ${esc(setText(t))}</div>`).join('')}</div>`).join('')+`<button class="btn s dark" style="margin-top:12px;margin-right:8px" data-act="shareOpen" data-a="${s.id}">Share story</button><button class="btn red s" style="margin-top:12px" data-act="delSessAsk" data-a="${s.id}">Delete workout</button>`:''}</div>`;
 }
 
 /* ---------- library ---------- */
@@ -3584,161 +3583,7 @@ Object.assign(A,{
 {const _hh=homeHub;homeHub=function(){return todayCard()+_hh()}}
 {const _wk=wkView;wkView=function(){const h=_wk();return S.sess?h:h+`<div class="card"><div class="row sp"><div><div style="font-weight:700">Challenges</div><div class="mu sm">${chSt()&&!chSt().fin?esc(CHAL[chSt().id].n)+' · day '+(chSt().done.length+1):'21 to 30 day plans with a workout for every day.'}</div></div><button class="btn s" data-act="tab" data-a="chal">Open</button></div></div>`}}
 
-/* ================= RECOVERY CODE (v2.5) =================
-   Workouts are encrypted with a key made from the password, so a forgotten password cannot be emailed or
-   reset by the server. Instead a random recovery code protects a copy of the data key and the sign-in
-   secret. The copy lives at recov/<hash of code>, readable only by someone who already has the code.
-   The code also names the account, so it finds a forgotten username too. Resetting swaps the password
-   but keeps the same data key, so nothing has to be re-encrypted. */
-const RK_AL='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',RK_IT=100000;
-const rkNorm=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-const rkFmt=c=>c.match(/.{1,5}/g).join('-');
-function rkGen(){const b=crypto.getRandomValues(new Uint8Array(20));let s='';for(const x of b)s+=RK_AL[x&31];return s}
-async function rkId(code){const h=await crypto.subtle.digest('SHA-256',enc.encode('legacy-rec|'+code));return Array.from(new Uint8Array(h)).map(x=>x.toString(16).padStart(2,'0')).join('')}
-const rkImport=jwk=>crypto.subtle.importKey('jwk',jwk,{name:'AES-GCM'},true,['encrypt','decrypt']);
-const rkOk=()=>!!(DB&&DB.auth);
-
-/* make (or replace) the account's recovery code. dataKey = the key that encrypts the workouts. */
-async function rkCreate(u,dataKey,fp){
-  const code=rkGen(),salt=crypto.getRandomValues(new Uint8Array(16)),rk=await deriveKey(code,salt,RK_IT);
-  const jwk=await crypto.subtle.exportKey('jwk',dataKey),id=await rkId(code);
-  const sealed=await seal(rk,{u,k:jwk,fp});
-  await DB.doc('recov/'+id).set(Object.assign({salt:b64(salt),it:RK_IT},sealed));
-  const ref=DB.doc('accts/'+u),a=await ref.get(),old=a.exists?a.data():null;
-  if(old){
-    if(old.rid&&old.rid!==id){try{await DB.doc('recov/'+old.rid).delete()}catch(e){}}
-    await ref.set(Object.assign({},old,{rid:id}));
-  }
-  return rkFmt(code);
-}
-/* find and open a recovery record from what the person typed */
-async function rkOpen(raw){
-  const code=rkNorm(raw);if(code.length!==20)throw new Error('bad');
-  const id=await rkId(code),d=await DB.doc('recov/'+id).get();
-  if(!d.exists)throw new Error('bad');
-  const r=d.data(),rk=await deriveKey(code,unb64(r.salt),r.it||RK_IT),p=await open(rk,{iv:r.iv,ct:r.ct});
-  return{id,r,rk,p};
-}
-
-/* ---- shown once, right after the code is made ---- */
-function rkBody(code,u){
-  const mail='mailto:?subject='+encodeURIComponent('My Legacy recovery code')+'&body='+encodeURIComponent('Legacy username: '+u+'\nRecovery code: '+code+'\n\nThis code can reset my Legacy password and unlock my workouts. Keep this email private.');
-  return`<p class="sm" style="margin:10px 0">Your username is <b>@${esc(u)}</b>. If you ever forget your password or username, this code gets you back in <b>with all your data</b>. It is shown only now.</p>
-  <div id="rk_code" style="font:700 22px/1.3 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;text-align:center;padding:16px 8px;margin:12px 0;border:2px dashed var(--line);border-radius:14px;user-select:all;word-break:break-all">${esc(code)}</div>
-  <div class="row wrap" style="gap:8px"><button class="btn dark s" data-act="rkCopy" data-a="${esc(code)}">Copy</button><a class="btn s" href="${mail}">Email it to myself</a></div>
-  <p class="mu xs" style="margin:12px 0 0">Anyone who has this code can unlock your account, so keep it somewhere private. Making a new code later cancels this one.</p>`;
-}
-function rkShowScreen(code,u,next){
-  $('#app').innerHTML=`<div class="lock" style="justify-content:flex-start;padding-top:40px">${MARK.replace('class="mark"','class="mark" style="width:60px;height:60px"')}
-  <div class="word" style="font-size:52px">LEGACY</div><div class="hero" style="color:var(--au2);font-size:22px">Save your recovery code</div>
-  <div class="card" style="width:100%;text-align:left;max-width:420px">${rkBody(code,u)}<button class="btn blk" id="rk_done" style="margin-top:16px">I saved it, continue</button></div></div>`;
-  $('#rk_done').onclick=next;
-}
-MODALS2.rkshow=m=>sheet('Your recovery code',rkBody(m.code,m.u)+`<button class="btn blk" data-act="mclose" style="margin-top:14px">Done</button>`);
-MODALS2.rkpw=m=>sheet('New recovery code',`<p class="mu sm" style="margin:8px 0">Enter your password to make a new code. Any older code stops working.</p>
-  <label class="f">Password<input type="password" id="rk_pw" autocomplete="current-password"></label>
-  <div id="rk_err" style="color:var(--em);font-size:13px;min-height:20px;margin-top:8px">${esc(m.err||'')}</div>
-  <button class="btn blk" data-act="rkMake">Create code</button>`);
-
-/* ---- forgot username or password ---- */
-function rkForgot(msg,good){
-  $('#app').innerHTML=`<div class="lock" style="justify-content:flex-start;padding-top:40px">${MARK.replace('class="mark"','class="mark" style="width:60px;height:60px"')}
-  <div class="word" style="font-size:52px">LEGACY</div><div class="hero" style="color:var(--au2);font-size:22px">Forgot username or password</div>
-  <div class="card" style="width:100%;text-align:left;max-width:420px">
-  <p class="mu sm" style="margin:0 0 6px">Enter the recovery code you saved when you made your account. It finds your username and lets you pick a new password. Your workouts stay.</p>
-  <label class="f">Recovery code<input type="text" id="rk_c" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="XXXXX-XXXXX-XXXXX-XXXXX"></label>
-  <label class="f">New password (6+ characters)<input type="password" id="rk_p" autocomplete="new-password"></label>
-  <label class="f">Confirm new password<input type="password" id="rk_p2" autocomplete="new-password"></label>
-  <div id="a_err" style="color:var(${good?'--ok':'--em'});font-size:13px;min-height:20px;margin-top:10px">${esc(msg||'')}</div>
-  <button class="btn blk" id="rk_go" data-act="rkReset">Reset password</button>
-  <button class="btn ghost blk" style="margin-top:10px" data-act="rkWho">Just show my username</button>
-  <button class="btn ghost blk" style="margin-top:10px" data-act="rkBack">Back to sign in</button>
-  <p class="mu xs" style="margin:12px 0 0">No code? Without it a forgotten password can't be recovered, because your workouts are encrypted with it.</p></div></div>`;
-}
-const rkErr=(m,good)=>{const e=$('#a_err');if(e){e.style.color='var(--'+(good?'ok':'em')+')';e.textContent=m}};
-const _as=authScreen;
-authScreen=function(mode,msg,uval){
-  if(mode==='forgot')return rkForgot(msg);
-  _as(mode,msg,uval);
-  if(mode!=='up'&&rkOk()){const g=$('#a_go');if(g)g.insertAdjacentHTML('afterend','<button class="btn ghost blk" id="a_forgot" data-act="rkForgot" style="margin-top:10px">Forgot username or password?</button>')}
-};
-const _rs=resetState;resetState=function(){_rs();S._recOn=undefined};
-
-/* is a recovery code set up on this account? (looked up once, shown in Settings and on You) */
-function rkStatus(){
-  if(S._recOn===undefined&&rkOk()&&S.user){
-    S._recOn=null;const u=S.user;
-    DB.doc('accts/'+u).get().then(d=>{if(S.user!==u)return;S._recOn=!!(d.exists&&d.data().rid);if(S.tab==='set'||S.tab==='me')render()}).catch(()=>{S._recOn=undefined})
-  }
-  return S._recOn;
-}
-function rkRow(){
-  if(!rkOk())return'';const on=rkStatus();
-  return`<div class="row sp" style="margin:12px 0"><div><div style="font-weight:700">Recovery code</div><div class="mu sm">${on?'Set up. Resets a forgotten password and keeps your data.':on===false?'Not set up. Without it a forgotten password cannot be recovered.':'Checking…'}</div></div><button class="btn s ${on?'dark':''}" data-act="rkAsk">${on?'New code':'Create'}</button></div>`;
-}
-const _mev2=meView;
-meView=function(){
-  const h=_mev2();
-  if(rkStatus()!==false||localStorage.getItem('legacy_rk_skip_'+S.user))return h;
-  return`<div class="card gold" style="margin-bottom:12px"><div style="font-weight:700">Protect your account</div><div class="mu sm" style="margin:2px 0 10px">Make a recovery code now. If you forget your password or username it is the only way back in with your data.</div><div class="row" style="gap:8px"><button class="btn s" data-act="rkAsk">Create code</button><button class="btn ghost s" data-act="rkSkip">Later</button></div></div>`+h;
-};
-
-Object.assign(A,{
-  rkForgot(){rkForgot()},
-  rkBack(){authScreen('in')},
-  rkCopy(c){try{navigator.clipboard.writeText(c).then(()=>toast('Copied'),()=>toast('Could not copy'))}catch(e){toast('Could not copy')}},
-  rkSkip(){try{localStorage.setItem('legacy_rk_skip_'+S.user,'1')}catch(e){}render()},
-  rkAsk(){S.modal={type:'rkpw'};render()},
-  async rkMake(){
-    const pw=($('#rk_pw')||{}).value||'',fail=m=>{S.modal={type:'rkpw',err:m};render()};
-    if(!pw)return fail('Enter your password.');
-    try{
-      const u=S.user,a=await DB.doc('accts/'+u).get();
-      if(!a.exists)return fail('Account record not found.');
-      const d=a.data(),pk=await deriveKey(pw,unb64(d.salt),d.it||IT);
-      try{await open(pk,d.chk)}catch(e){return fail('Wrong password.')}
-      const code=await rkCreate(u,KEY,await deriveFb(u,pw));
-      S._recOn=true;S.modal={type:'rkshow',code,u};render();
-    }catch(e){console.error(e);fail('Could not save the code. Check your connection. If this keeps happening the database rules need updating. ['+String(e&&(e.code||e.message)||e).slice(0,60)+']')}
-  },
-  async rkWho(){
-    const c=($('#rk_c')||{}).value;rkErr('Looking…',1);
-    try{const o=await rkOpen(c);rkErr('Your username is @'+o.p.u+'. Enter it on the sign-in screen.',1)}
-    catch(e){rkErr('That recovery code is not right.')}
-  },
-  async rkReset(){
-    const c=$('#rk_c').value,pw=$('#rk_p').value,pw2=$('#rk_p2').value,btn=$('#rk_go');
-    if(pw.length<6)return rkErr('Password must be at least 6 characters.');
-    if(pw!==pw2)return rkErr('Passwords do not match.');
-    btn.disabled=true;btn.textContent='One moment…';
-    const back=m=>{rkForgot(m);const e=$('#rk_c');if(e)e.value=c};
-    let o;
-    try{o=await rkOpen(c)}catch(e){return back('That recovery code is not right.')}
-    try{
-      const{u,k,fp}=o.p,AU=DB.auth;
-      try{await AU.signIn(u,fp)}catch(e){return back('This code is out of date. Use the newest recovery code you saved.')}
-      const dataKey=await rkImport(k),ref=DB.doc('accts/'+u),snap=await ref.get(),old=snap.exists?snap.data():{};
-      const salt=crypto.getRandomValues(new Uint8Array(16)),pk=await deriveKey(pw,salt,IT),nfp=await deriveFb(u,pw);
-      /* order matters: if anything stops half way the old code still works and the reset can be run again */
-      await ref.set(Object.assign({},old,{salt:b64(salt),it:IT,chk:await seal(pk,{ok:'legacy'}),dk:await seal(pk,{k}),chk2:await seal(dataKey,{ok:'legacy'}),rid:o.id}));
-      await AU.setPassword(nfp);
-      await DB.doc('recov/'+o.id).set(Object.assign({salt:o.r.salt,it:o.r.it},await seal(o.rk,{u,k,fp:nfp})));
-      try{localStorage.setItem('legacy_session',JSON.stringify({u,k:await crypto.subtle.exportKey('jwk',dataKey)}))}catch(e){}
-      enter(u,dataKey);setTimeout(()=>toast('Password changed. Your username is @'+u),900);
-    }catch(e){console.error(e);back('Could not reset. Check your connection and try again. ['+String(e&&(e.code||e.message)||e).slice(0,60)+']')}
-  }
-});
-
-/* ---- iPhone / iPad: show how to put the web app on the Home Screen ---- */
-const isIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const isStandalone=()=>!!(window.navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));
-const _uc=updCard;
-updCard=function(){
-  const h=_uc();
-  if(!isIOS()||isStandalone()||window.LegacyNative||lsGet('legacy_ios_hint')==='1')return h;
-  return h+`<div class="card gold"><div style="font-weight:700">Add Legacy to your Home Screen</div><div class="mu sm" style="margin:2px 0 10px">In Safari tap the Share button, then <b>Add to Home Screen</b>. It opens full screen like a normal app. Open it from the Home Screen icon and sign in there.</div><button class="btn ghost s" data-act="iosHide">Got it</button></div>`;
-};
-A.iosHide=function(){lsSet('legacy_ios_hint','1');render()};
+/* (recovery codes and the iPhone web hint were removed in v2.6.1) */
 
 /* ================= ROUTINE ENGINE (v2.6): pixel glyph animations, warm-up / cool-down moves, how-to steps =================
    A glyph is a small stick figure drawn pixel by pixel on a 64x64 canvas (far limbs stippled), so it matches the
@@ -4366,7 +4211,7 @@ V2.set=setView=function(){
   ${typeof hcCard==='function'?setAcc('hc','Health Connect','Sync steps and workouts',hcCard()):''}
   ${setAcc('learn','Learn and tour','Lessons, and replay the tour',`<div class="row wrap" style="gap:8px"><button class="btn s dark" data-act="tab" data-a="learn">Open lessons</button><button class="btn s dark" data-act="wnOpen">What's new in v2</button></div>`)}
   ${setAcc('about','About','Version and updates',aboutCard())}
-  ${setAcc('acct','Account','@'+esc(S.user)+', backup and sign out',`<p class="mu sm" style="margin:0 0 10px">Signed in as <b>@${esc(S.user)}</b>. Your data is encrypted with your password, so only you can read it.</p>${typeof rkRow==='function'?rkRow():''}<div class="row wrap"><button class="btn dark s" data-act="signout">Sign out</button><button class="btn ghost s" data-act="export">Copy my data</button><button class="btn red s" data-act="wipeAsk">Delete all my data</button></div>`)}`;
+  ${setAcc('acct','Account','@'+esc(S.user)+', backup and sign out',`<p class="mu sm" style="margin:0 0 10px">Signed in as <b>@${esc(S.user)}</b>. Your data is encrypted with your password, so only you can read it.</p><div class="row wrap"><button class="btn dark s" data-act="signout">Sign out</button><button class="btn ghost s" data-act="export">Copy my data</button><button class="btn red s" data-act="wipeAsk">Delete all my data</button></div>`)}`;
 };
 {const st=document.createElement('style');st.textContent=`
 .setacc .accb{margin-top:10px}
@@ -4376,6 +4221,174 @@ V2.set=setView=function(){
 .wzopt.on{border-color:var(--tx);background:var(--panel)}
 .wzchk{display:inline-block;text-align:left;margin-top:8px}.wzchk div{display:flex;gap:10px;align-items:center;margin:9px 0;color:var(--mu)}.wzchk div.on{color:var(--tx)}
 .wzchk i{width:20px;height:20px;border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:13px}.wzchk .on i{background:var(--tx);color:var(--bg)}
+`;document.head.appendChild(st)}
+
+/* ================= SHARE TO STORY (v2.6.1): Instagram-ready 1080x1920 cards for any finished workout ================= */
+const SH_STYLES=[['track','Track'],['pixel','Pixel'],['minimal','Minimal'],['muscles','Muscles'],['receipt','Receipt'],['poster','Poster']];
+const SH_BG=[['theme','Theme'],['clear','Transparent'],['photo','My photo']];
+const shW=1080,shH=1920;
+function shFind(id){return allSessions().find(s=>String(s.id)===String(id))}
+function shData(s){
+  const u=unit(),sets=s.sets,end=s.e||s.s,dur=Math.max(1,end-s.s),by={},mus={};
+  sets.forEach(t=>{(by[t.x]=by[t.x]||[]).push(t);const e=BYID[t.x];if(e)mus[e.m]=(mus[e.m]||0)+1});
+  const exs=Object.keys(by).map(x=>{
+    const e=BYID[x],L=by[x],hold=e&&e.k==='t',top=L.reduce((a,t)=>(!a||(t.w||0)>(a.w||0)||((t.w||0)===(a.w||0)&&(t.r||0)>(a.r||0)))?t:a,null);
+    return{id:x,name:e?e.name:String(x),n:L.length,top,hold,pr:L.some(t=>t.pr),m:e&&e.m};
+  });
+  const pts=sets.map((t,i)=>({f:Math.min(1,Math.max(0,((t.t||s.s)-s.s)/dur)),i:i+1,pr:!!t.pr}));
+  return{s,name:s.sd||'Workout',date:dlabel(dkey(s.s),true),dur,time:hms(dur),nSets:sets.length,reps:sets.reduce((a,t)=>a+(t.r||0),0),vol:Math.round(fromKg(volumeKg(sets),u)),u,kcal:sessKcal(s),prs:sets.filter(t=>t.pr).length,exs,mus,pts,top:exs.slice().sort((a,b)=>b.n-a.n)[0]};
+}
+const shSet=(e,u)=>e.top?(e.hold?(e.top.d||0)+'s':(e.n+' × '+(e.top.r||0)))+(e.top.w?' @ '+e.top.w+u:''):'';
+async function shDraw(cv,sh){
+  const d=sh.d,st=sh.style,bg=sh.bg,W=shW,H=shH,x=cv.getContext('2d');
+  cv.width=W;cv.height=H;x.clearRect(0,0,W,H);
+  try{await Promise.all([document.fonts.load('700 60px "Pixelify Sans"'),document.fonts.load('60px LgNum','0123456789')])}catch(e){}
+  const cs=getComputedStyle(document.documentElement),g=k=>cs.getPropertyValue(k).trim();
+  const theme=bg==='theme',ovl=!theme;
+  const ink=theme?(g('--tx')||'#111'):'#fff',acc=theme?(g('--acc')||'#c8391f'):'#fff',panel=g('--panel-s')||'#f8f1e2';
+  const F=s=>s+'px "LgNum","Pixelify Sans","Courier New",monospace',P=s=>'700 '+s+'px "Pixelify Sans","LgNum","Courier New",monospace';
+  /* background */
+  if(theme){
+    const low=document.createElement('canvas'),px=6;renderScene(low,lookTheme(),0,0,[W/px,H/px]);OBJ.key='';
+    x.imageSmoothingEnabled=false;x.drawImage(low,0,0,W,H);
+    x.save();x.globalAlpha=.62;x.fillStyle=g('--bg')||'#000';x.fillRect(0,0,W,H);x.restore();
+  }else if(bg==='photo'&&sh.img){
+    const im=sh.img,r=Math.max(W/im.width,H/im.height),w=im.width*r,h=im.height*r;
+    x.drawImage(im,(W-w)/2,(H-h)/2,w,h);
+    const gr=x.createLinearGradient(0,0,0,H);gr.addColorStop(0,'rgba(0,0,0,.45)');gr.addColorStop(.35,'rgba(0,0,0,.05)');gr.addColorStop(.65,'rgba(0,0,0,.1)');gr.addColorStop(1,'rgba(0,0,0,.65)');x.fillStyle=gr;x.fillRect(0,0,W,H);
+  }
+  const sh1=()=>{if(ovl){x.shadowColor='rgba(0,0,0,.6)';x.shadowBlur=14;x.shadowOffsetY=3}},sh0=()=>{x.shadowColor='transparent';x.shadowBlur=0;x.shadowOffsetY=0};
+  const T=(t,px,py,size,o={})=>{x.save();sh1();x.font=o.f||P(size);x.fillStyle=o.c||ink;x.textAlign=o.a||'left';x.textBaseline='alphabetic';
+    let s=String(t);const mw=o.mw;if(mw){let z=size;while(!o.f&&x.measureText(s).width>mw&&z>size*.6){z-=4;x.font=P(z)}while(x.measureText(s).width>mw&&s.length>3)s=s.slice(0,-2);if(s!==String(t))s=s.trim()+'…'}x.fillText(s,px,py);x.restore()};
+  const box=(bx,by,bw,bh,c)=>{x.fillStyle=ink;x.fillRect(bx+12,by+12,bw,bh);x.fillStyle=c||panel;x.fillRect(bx,by,bw,bh);x.strokeStyle=ink;x.lineWidth=8;x.strokeRect(bx+4,by+4,bw-8,bh-8)};
+  const mark=()=>T('LEGACY',70,130,64,{f:P(64)});
+  const mini=(v,l,px,py,al)=>{T(v,px,py,110,{f:'700 '+F(110),a:al});T(l,px,py+48,36,{f:F(36),a:al,c:ovl?'rgba(255,255,255,.85)':ink})};
+  const foot=()=>{T('legacy fitness',W/2,H-70,34,{f:F(34),a:'center',c:ovl?'rgba(255,255,255,.8)':ink})};
+  const volL='volume '+d.u;
+
+  if(st==='track'){
+    mark();T(d.date,W-70,126,40,{f:F(40),a:'right'});
+    T(d.name,70,330,110,{mw:W-140});
+    T(d.exs.length+' exercises · '+d.nSets+' sets',70,400,42,{f:F(42),c:ovl?'rgba(255,255,255,.9)':ink});
+    /* the track: one line through the whole session, a dot for every set, a star for every record */
+    const bx=90,by=520,bw=W-180,bh=760;
+    if(!ovl){x.fillStyle='rgba(0,0,0,.22)';x.fillRect(bx-30,by-30,bw+60,bh+60)}
+    x.save();sh1();x.strokeStyle=ovl?'rgba(255,255,255,.35)':ink;x.lineWidth=4;x.setLineDash([4,18]);
+    for(let i=0;i<=4;i++){x.beginPath();x.moveTo(bx,by+bh*i/4);x.lineTo(bx+bw,by+bh*i/4);x.stroke()}x.restore();
+    const n=Math.max(1,d.nSets),P2=[[bx,by+bh]].concat(d.pts.map(p=>[bx+p.f*bw,by+bh-(p.i/n)*bh]));
+    P2.push([bx+bw,by]);
+    x.save();sh1();x.lineJoin='miter';x.lineCap='square';x.strokeStyle=theme?acc:'#fff';x.lineWidth=18;x.beginPath();
+    P2.forEach((p,i)=>{if(i===0)x.moveTo(p[0],p[1]);else{x.lineTo(p[0],P2[i-1][1]);x.lineTo(p[0],p[1])}});x.stroke();x.restore();
+    d.pts.forEach((p,i)=>{const px=bx+p.f*bw,py=by+bh-(p.i/n)*bh;
+      x.save();sh1();x.fillStyle=p.pr?(theme?ink:'#ffd84a'):(theme?ink:'#fff');const r=p.pr?22:11;x.fillRect(px-r,py-r,r*2,r*2);x.restore()});
+    x.save();sh1();x.fillStyle=theme?ink:'#fff';x.fillRect(bx-16,by+bh-16,32,32);x.restore();
+    T('START',bx,by+bh+70,38,{f:F(38)});T(d.time,bx+bw,by+bh+70,38,{f:F(38),a:'right'});
+    if(d.prs)T('★ '+d.prs+' record'+(d.prs>1?'s':''),bx+bw,by-50,44,{a:'right',c:ovl?'#ffd84a':acc});
+    mini(d.time,'time',70,1560);mini(String(d.nSets),'sets',W/2,1560,'center');mini(fmtN(d.vol),volL,W-70,1560,'right');
+    foot();
+  }else if(st==='pixel'){
+    box(70,70,940,250);T('LEGACY',110,180,92,{c:ink});T(d.date,110,240,40,{f:F(40)});T(d.name,110,300,34,{c:acc,mw:860});
+    const tiles=[[d.time,'time'],[d.nSets,'sets'],[d.reps,'reps'],[fmtN(d.vol),volL],[d.kcal,'kcal burned'],[d.prs||d.exs.length,d.prs?'records':'exercises']];
+    tiles.forEach(([v,l],i)=>{const bx=70+(i%2)*480,by=760+Math.floor(i/2)*270;box(bx,by,460,250);T(v,bx+34,by+140,110,{f:'700 '+F(110),c:acc});T(l,bx+34,by+210,40,{f:F(40)})});
+    foot();
+  }else if(st==='minimal'){
+    mark();
+    const y0=1180;T(d.name,70,y0,60,{mw:W-140});
+    mini(d.time,'time',70,y0+170);mini(fmtN(d.vol),volL,70,y0+370);mini(String(d.nSets),'sets',70,y0+570);
+    if(d.prs)T('★ '+d.prs+' record'+(d.prs>1?'s':''),70,y0+700,48,{c:ovl?'#ffd84a':acc});
+    foot();
+  }else if(st==='muscles'){
+    mark();T('MUSCLES HIT',70,330,100);T(d.name+' · '+d.date,70,400,40,{f:F(40),mw:W-140});
+    const rows=Object.entries(d.mus).sort((a,b)=>b[1]-a[1]).slice(0,8),mx=Math.max(1,...rows.map(r=>r[1])),bw=520;
+    rows.forEach(([c,n],i)=>{const y=560+i*140;T(MU[c]||c,70,y+50,54,{mw:380});
+      x.save();sh1();x.fillStyle=ovl?'rgba(255,255,255,.25)':'rgba(0,0,0,.25)';x.fillRect(460,y+4,bw-100,58);x.fillStyle=theme?acc:'#fff';const cells=Math.max(1,Math.round(n/mx*10));for(let k=0;k<cells;k++)x.fillRect(466+k*40,y+10,34,46);x.restore();
+      T(n+' set'+(n>1?'s':''),W-70,y+50,40,{f:F(40),a:'right'})});
+    mini(d.time,'time',70,1700);mini(String(d.nSets),'sets',W-70,1700,'right');foot();
+  }else if(st==='receipt'){
+    const bx=110,bw=W-220,rows=d.exs.slice(0,11),bh=420+rows.length*92+(d.exs.length>11?60:0)+330,by=Math.max(140,(H-bh)/2);
+    x.save();x.shadowColor='rgba(0,0,0,.35)';x.shadowBlur=30;x.shadowOffsetY=12;x.fillStyle='#f6f1e4';x.fillRect(bx,by,bw,bh);x.restore();
+    const k='#17140f';let y=by+110;x.textAlign='center';
+    T('LEGACY',W/2,y,84,{c:k,a:'center'});y+=56;T(d.name+' · '+d.date,W/2,y,34,{f:F(34),c:k,a:'center',mw:bw-80});y+=40;
+    const dash=()=>{x.save();x.strokeStyle=k;x.lineWidth=4;x.setLineDash([14,12]);x.beginPath();x.moveTo(bx+40,y);x.lineTo(bx+bw-40,y);x.stroke();x.restore();y+=60};
+    dash();
+    rows.forEach(e=>{T(e.name,bx+50,y,40,{f:F(40),c:k,mw:bw-340});T(shSet(e,d.u),bx+bw-50,y,36,{f:F(36),c:k,a:'right'});y+=46;if(e.pr)T('★ new record',bx+50,y,30,{f:F(30),c:'#b3261e'});y+=46});
+    if(d.exs.length>11){T('+ '+(d.exs.length-11)+' more',bx+50,y,34,{f:F(34),c:k});y+=60}
+    dash();
+    [['TIME',d.time],['SETS',d.nSets],['REPS',d.reps],['VOLUME',fmtN(d.vol)+' '+d.u]].forEach(([l,v])=>{T(l,bx+50,y,40,{f:F(40),c:k});T(v,bx+bw-50,y,48,{f:'700 '+F(48),c:k,a:'right'});y+=70});
+    y+=10;T('THANK YOU FOR TRAINING',W/2,y,34,{f:F(34),c:k,a:'center'});
+  }else{ /* poster */
+    mark();
+    ['WORKOUT','COMPLETE'].forEach((w,i)=>T(w,70,420+i*190,180,{c:i?(theme?acc:'#fff'):ink}));
+    const ex=d.top&&BYID[d.top.id],key=ex&&typeof glFor==='function'?glFor(ex):'squat';
+    try{const g=document.createElement('canvas');g.width=g.height=64;glRender(g,key,380,false);x.save();sh1();x.imageSmoothingEnabled=false;x.drawImage(g,W/2-300,760,600,600);x.restore()}catch(e){}
+    T(d.name,W/2,1440,60,{a:'center',mw:W-140});
+    mini(d.time,'time',70,1640);mini(String(d.nSets),'sets',W/2,1640,'center');mini(fmtN(d.vol),volL,W-70,1640,'right');
+    foot();
+  }
+}
+let shTok=0;
+async function shPaint(){
+  const sh=S.sh;if(!sh)return;const cv=document.getElementById('shc');if(!cv)return;const tk=++shTok;
+  try{await shDraw(cv,sh)}catch(e){console.error('share card',e)}
+  if(tk!==shTok)return;
+}
+function shHtml(){
+  const sh=S.sh;
+  const chip=(list,key)=>`<div class="chips">${list.map(([v,l])=>`<button class="chip${sh[key]===v?' on':''}" data-act="shSet" data-a="${key}" data-b="${v}">${l}</button>`).join('')}</div>`;
+  return`<div class="gd rt shr"><div>
+  <div class="gdt"><button class="x" data-act="shClose" aria-label="Close">✕</button><div class="grow"><div class="lbl">Share your workout</div><div class="rtt" style="font-size:22px">${esc(sh.d.name)}</div></div></div>
+  <div class="shprev ${sh.bg==='theme'?'':'chk'}"><canvas id="shc" width="${shW}" height="${shH}"></canvas></div>
+  <div class="lbl" style="margin:10px 0 6px">Style</div>${chip(SH_STYLES,'style')}
+  <div class="lbl" style="margin:14px 0 6px">Background</div>${chip(SH_BG,'bg')}
+  ${sh.bg==='photo'?`<label class="btn s dark" style="margin-top:10px;display:inline-block">${sh.img?'Change photo':'Choose a photo'}<input type="file" id="sh_photo" accept="image/*" hidden></label>`:''}
+  ${sh.bg==='clear'?'<p class="mu xs" style="margin:8px 0 0">Saved with a see-through background, so you can place it over a photo or video in your story.</p>':''}
+  <div class="rtbar"><button class="btn blk" data-act="shShare">Share to story</button><button class="btn ghost blk s" data-act="shSave" style="margin-top:8px">Save image</button></div>
+  </div></div>`;
+}
+async function shBlob(){
+  const sh=S.sh,cv=document.createElement('canvas');await shDraw(cv,sh);
+  return new Promise(res=>cv.toBlob(res,'image/png'));
+}
+async function shOut(share){
+  toast('Making your image…');
+  const blob=await shBlob();if(!blob){toast('Could not make the image');return}
+  const fn='legacy-workout.png',N=window.LegacyNative;
+  if(share){
+    if(N&&N.shareImage){const b64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).split(',')[1]);fr.readAsDataURL(blob)});try{await N.shareImage(b64,fn,'My Legacy workout');return}catch(e){}}
+    try{const f=new File([blob],fn,{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'My Legacy workout'});return}}catch(e){}
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast('Saved to your downloads');
+}
+Object.assign(A,{
+  shareOpen(id){
+    const s=shFind(id)||(S.modal&&S.modal.s);if(!s){toast('Could not find that workout');return}
+    S.modal=null;S.sh={d:shData(s),style:(S.profile&&S.profile.shStyle)||'track',bg:(S.profile&&S.profile.shBg)||'theme',img:null};render();
+  },
+  shSet(k,v){const sh=S.sh;sh[k]=v;if(k==='style'||k==='bg'){S.profile[k==='style'?'shStyle':'shBg']=v;saveProfile()}render()},
+  shClose(){S.sh=null;render()},
+  shShare(){shOut(true).catch(()=>toast('Could not share'))},
+  shSave(){shOut(false).catch(()=>toast('Could not save'))}
+});
+document.addEventListener('change',e=>{
+  if(e.target&&e.target.id==='sh_photo'&&S.sh){
+    const f=e.target.files&&e.target.files[0];if(!f)return;
+    const im=new Image();im.onload=()=>{S.sh.img=im;render()};im.onerror=()=>toast('Could not read that photo');im.src=URL.createObjectURL(f);
+  }
+});
+{const _r=render;render=function(){
+  if(S.sh&&!S.wz){document.body.classList.remove('wide');document.getElementById('app').innerHTML=shHtml()+modalHtml();shPaint();return}
+  return _r.apply(this,arguments);
+}}
+{const _mh=modalHtml;modalHtml=function(){
+  let h=_mh.apply(this,arguments);
+  if(S.modal&&S.modal.type==='done'&&h.includes('data-act="mclose">Nice</button>'))h=h.replace('<button class="btn blk" data-act="mclose">Nice</button>',`<button class="btn blk" data-act="shareOpen" data-a="${S.modal.s.id}">Share to story</button><button class="btn ghost blk" style="margin-top:8px" data-act="mclose">Nice</button>`);
+  return h;
+}}
+{const st=document.createElement('style');st.textContent=`
+.shprev{display:flex;justify-content:center;margin:12px 0;padding:8px;background:var(--field)}
+.shprev.chk{background-color:#555;background-image:linear-gradient(45deg,#777 25%,transparent 25%,transparent 75%,#777 75%),linear-gradient(45deg,#777 25%,transparent 25%,transparent 75%,#777 75%);background-size:24px 24px;background-position:0 0,12px 12px}
+.shprev canvas{height:min(58vh,640px);width:auto;max-width:100%;aspect-ratio:1080/1920;image-rendering:auto}
+.gd.shr>div{max-width:560px}
 `;document.head.appendChild(st)}
 
 Object.assign(A,{

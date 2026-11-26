@@ -1,10 +1,9 @@
 {
-  "version": "2.6.0",
+  "version": "2.6.1",
   "color": "#000000",
   "notes": [
-    "Guided routines: every workout now opens a full overview of warm-up, main workout and cool-down first. Tap Edit to change reps, reorder, swap, add or remove moves, then Start",
-    "A guided warm-up and cool-down, with animated pixel figures and step-by-step how-to for every move. Tap ? any time",
-    "New plan setup: answer a few questions once (ask again any time in Settings or on the Workout tab) and get routines built for your goal, level and any discomfort",
-    "Settings are now neat drop-downs"
+    "Share to story: after a workout (or from your history) make an Instagram-ready 1080x1920 image. Six styles: Track, Pixel, Minimal, Muscles, Receipt and Poster, on your Legacy theme, a see-through background or your own photo",
+    "Track draws your whole session as one line, with a dot for every set and a marker for every personal record",
+    "Removed the account recovery code. Accounts made in 2.5.0 can still sign in as normal"
   ]
 }
